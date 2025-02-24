@@ -2,84 +2,113 @@
 /**
  * Fired during plugin activation
  *
- * @link       https://example.com
- * @since      1.0.0
- *
  * @package    SchemaProWP
  * @subpackage SchemaProWP/includes
+ * @since      1.0.0
  */
 
 /**
- * Fired during plugin activation.
+ * Handles plugin activation tasks.
  *
- * This class defines all code necessary to run during the plugin's activation.
+ * This class defines all code necessary to run during the plugin's activation,
+ * including database table creation and initial setup.
  *
  * @since      1.0.0
  * @package    SchemaProWP
  * @subpackage SchemaProWP/includes
- * @author     Your Name
  */
-class Schema_Pro_WP_Activator {
+class SchemaProWP_Activator {
 
     /**
      * Create the necessary database tables and register post types
      *
-     * @since    1.0.0
+     * @since  1.0.0
+     * @return void
      */
     public static function activate() {
+        self::create_database_tables();
+        self::create_default_options();
+        self::register_post_types();
+        self::setup_roles_and_capabilities();
+        flush_rewrite_rules();
+    }
+
+    /**
+     * Create required database tables
+     *
+     * @since  1.0.0
+     * @return void
+     */
+    private static function create_database_tables() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
-
-        // Registrera custom post type för organisationer
-        self::register_post_types();
-
-        // Resources table - behåller egen tabell för specifik resurshantering
-        $table_resources = $wpdb->prefix . 'schemaprowp_resources';
-        $sql_resources = "CREATE TABLE IF NOT EXISTS $table_resources (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            post_id bigint(20) NOT NULL,  -- Koppling till organization som wp_posts
-            name varchar(255) NOT NULL,
+        
+        // Resources table
+        $table_name = $wpdb->prefix . 'schemapro_resources';
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            title varchar(255) NOT NULL,
+            description text,
             type varchar(50) NOT NULL,
-            status varchar(50) NOT NULL DEFAULT 'active',
-            properties text,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            metadata longtext,
+            created_by bigint(20) unsigned NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
-            KEY post_id (post_id),
-            KEY type (type),
-            KEY status (status)
+            KEY idx_{$table_name}_title (title),
+            KEY idx_{$table_name}_type (type),
+            KEY idx_{$table_name}_status (status),
+            KEY idx_{$table_name}_created_by (created_by)
         ) $charset_collate;";
 
-        // Bookings table - behåller egen tabell för bokningsspecifik data
-        $table_bookings = $wpdb->prefix . 'schemaprowp_bookings';
-        $sql_bookings = "CREATE TABLE IF NOT EXISTS $table_bookings (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            resource_id mediumint(9) NOT NULL,
-            user_id bigint(20) NOT NULL,  -- Koppling till wp_users
+        // Bookings table
+        $table_name = $wpdb->prefix . 'schemapro_bookings';
+        $sql .= "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            resource_id bigint(20) unsigned NOT NULL,
+            user_id bigint(20) unsigned NOT NULL,
             start_time datetime NOT NULL,
             end_time datetime NOT NULL,
-            status varchar(50) NOT NULL DEFAULT 'pending',
-            comments text,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            notes text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
-            KEY resource_id (resource_id),
-            KEY user_id (user_id),
-            KEY status (status),
-            KEY booking_time (start_time, end_time)
+            KEY idx_{$table_name}_resource (resource_id),
+            KEY idx_{$table_name}_user (user_id),
+            KEY idx_{$table_name}_status (status),
+            KEY idx_{$table_name}_timespan (start_time,end_time)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        
-        // Skapa/uppdatera tabellerna
-        dbDelta($sql_resources);
-        dbDelta($sql_bookings);
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        dbDelta( $sql );
+    }
 
-        // Spara databasversionen
-        add_option('schemaprowp_db_version', '1.0.0');
+    /**
+     * Create default plugin options
+     *
+     * @since  1.0.0
+     * @return void
+     */
+    private static function create_default_options() {
+        $defaults = array(
+            'version' => SCHEMAPROWP_VERSION,
+            'db_version' => '1.0.0',
+            'initialized' => true,
+            'booking_settings' => array(
+                'min_booking_length' => 30, // minutes
+                'max_booking_length' => 480, // minutes
+                'advance_booking_days' => 30,
+                'cancellation_period' => 24, // hours
+            ),
+            'notification_settings' => array(
+                'email_notifications' => true,
+                'admin_email' => get_option('admin_email'),
+            ),
+        );
 
-        // Skapa standardroller och capabilities
-        self::setup_roles_and_capabilities();
+        add_option( 'schemaprowp_settings', $defaults );
     }
 
     /**
@@ -103,9 +132,6 @@ class Schema_Pro_WP_Activator {
                 'map_meta_cap' => true
             )
         );
-
-        // Spola om rewrite rules
-        flush_rewrite_rules();
     }
 
     /**

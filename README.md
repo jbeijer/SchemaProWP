@@ -48,6 +48,76 @@ SchemaProWP är ett avancerat WordPress-plugin för schemaläggning av personal 
 - MySQL 5.7+
 - Node.js 16+ (för utveckling)
 
+## Utvecklingsmiljö
+
+### Förberedelser
+
+1. Installera Node.js och npm
+2. Klona repositoryt:
+   ```bash
+   git clone https://github.com/username/SchemaProWP.git
+   ```
+3. Installera beroenden:
+   ```bash
+   cd SchemaProWP/src
+   npm install
+   ```
+
+### Utvecklingsserver
+
+1. Starta utvecklingsservern:
+   ```bash
+   npm run dev
+   ```
+2. För att bygga för produktion:
+   ```bash
+   npm run build
+   ```
+
+### Kodstruktur
+
+```
+SchemaProWP/
+├── admin/                 # Admin-relaterade PHP-filer
+│   ├── css/              # Admin CSS
+│   ├── js/               # Kompilerad JavaScript
+│   └── partials/         # Admin-templates
+├── includes/             # Kärnklasser och funktioner
+│   ├── api/             # REST API controllers
+│   └── models/          # Datamodeller
+├── src/                 # Frontend-källkod (Svelte)
+│   ├── admin/          # Admin-komponenter
+│   ├── components/     # Delade komponenter
+│   └── stores/         # Svelte stores
+└── languages/          # Översättningsfiler
+```
+
+### Kodstilar
+
+#### PHP
+- Följer WordPress kodstandarder
+- PSR-4 autoloading
+- Klassfiler använder `class-{name}.php` format
+- Metoder använder snake_case
+- Konstanter använder SCREAMING_SNAKE_CASE
+
+#### JavaScript/Svelte
+- Komponenter använder PascalCase
+- Funktioner och variabler använder camelCase
+- Stores använder camelCase.store.js format
+
+### Tester
+
+För att köra tester:
+
+```bash
+# PHP-tester
+composer test
+
+# JavaScript-tester
+npm test
+```
+
 ## Användning
 
 ### Administration
@@ -77,63 +147,26 @@ fetch('/wp-json/schemaprowp/v1/resources', {
 .then(resources => console.log(resources));
 ```
 
-## Utveckling
+## Dokumentation
 
-För utvecklare som vill bidra eller anpassa pluginet:
+- [API-dokumentation](docs/api.md)
+- [Datastruktur](docs/data-structure.md)
+- [Utvecklarguide](docs/developer-guide.md)
 
-1. Klona repositoryt:
-   ```bash
-   git clone https://github.com/username/schemaprowp.git
-   ```
+## Bidra
 
-2. Installera beroenden:
-   ```bash
-   npm install
-   ```
-
-3. Utveckling:
-   ```bash
-   npm run dev     # Starta Vite i utvecklingsläge
-   npm run build   # Bygga för produktion
-   npm run lint    # Kör linting
-   ```
-
-### Filstruktur
-```
-schemaprowp/
-├── dist/                 # Byggda frontend-filer
-├── includes/            
-│   ├── api/             # REST API controllers
-│   ├── models/          # Datamodeller
-│   └── admin/           # Admin-gränssnitt
-├── src/
-│   ├── admin/           # Admin Svelte-komponenter
-│   └── public/          # Publika Svelte-komponenter
-├── languages/           # Översättningsfiler
-└── tests/              # Testfiler
-```
-
-### Kodstandard
-- PHP: WordPress Coding Standards
-- JavaScript: ESLint med Prettier
-- Svelte: Rekommenderade best practices
-
-## Databastabeller
-- `wp_schemaprowp_resources`: Resurshantering
-- `wp_schemaprowp_bookings`: Bokningsdata
-
-Se `data-structure.md` för detaljerad databasstruktur.
+1. Forka repositoryt
+2. Skapa en feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commita dina ändringar (`git commit -m 'Add some AmazingFeature'`)
+4. Pusha till branchen (`git push origin feature/AmazingFeature`)
+5. Öppna en Pull Request
 
 ## Licens
 
-Detta projekt är licensierat under GPL v2 eller senare.
+Detta projekt är licensierat under MIT-licensen - se [LICENSE](LICENSE) filen för detaljer.
 
-## Support
+## Kontakt
 
-- GitHub Issues: Rapportera buggar och föreslå förbättringar
-- E-post: [support@example.com](mailto:support@example.com)
-- Dokumentation: Se `docs/` mappen för detaljerad dokumentation
+Johan - [@twitterhandle](https://twitter.com/twitterhandle)
 
-## Changelog
-
-Se `CHANGELOG.md` för en komplett lista över ändringar.
+Projektlänk: [https://github.com/username/SchemaProWP](https://github.com/username/SchemaProWP)

@@ -8,8 +8,6 @@ class SchemaProWP_Public {
      */
     public function init() {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_shortcode('schema_calendar', array($this, 'render_calendar_shortcode'));
-        add_shortcode('schema_app', array($this, 'render_app_shortcode'));
     }
 
     /**
@@ -18,16 +16,16 @@ class SchemaProWP_Public {
     public function enqueue_scripts() {
         wp_enqueue_style(
             'schema-pro-wp-public',
-            SCHEMAPROWP_PLUGIN_URL . 'dist/public.css',
+            SCHEMA_PRO_WP_PLUGIN_URL . 'dist/public.css',
             array(),
-            SCHEMAPROWP_VERSION
+            SCHEMA_PRO_WP_VERSION
         );
 
         wp_enqueue_script(
             'schema-pro-wp-public',
-            SCHEMAPROWP_PLUGIN_URL . 'dist/public.js',
+            SCHEMA_PRO_WP_PLUGIN_URL . 'dist/public.js',
             array('wp-api', 'wp-element'),
-            SCHEMAPROWP_VERSION,
+            SCHEMA_PRO_WP_VERSION,
             true
         );
 
@@ -35,40 +33,5 @@ class SchemaProWP_Public {
             'nonce' => wp_create_nonce('wp_rest'),
             'apiUrl' => rest_url('schemaprowp/v1'),
         ));
-    }
-
-    /**
-     * Rendera kalender via shortcode.
-     *
-     * @param array $atts Shortcode attribut.
-     * @return string HTML för kalendern.
-     */
-    public function render_calendar_shortcode($atts) {
-        $atts = shortcode_atts(array(
-            'id' => '',
-            'view' => 'month',
-        ), $atts, 'schema_calendar');
-
-        ob_start();
-        ?>
-        <div class="schema-pro-wp-calendar" 
-             data-calendar-id="<?php echo esc_attr($atts['id']); ?>"
-             data-view="<?php echo esc_attr($atts['view']); ?>">
-        </div>
-        <?php
-        return ob_get_clean();
-    }
-
-    /**
-     * Rendera app via shortcode.
-     *
-     * @return string HTML för appen.
-     */
-    public function render_app_shortcode() {
-        ob_start();
-        ?>
-        <div id="schemaprowp-app"></div>
-        <?php
-        return ob_get_clean();
     }
 }

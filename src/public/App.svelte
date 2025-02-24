@@ -4,7 +4,12 @@
   import ResourceList from './components/ResourceList.svelte';
   import BookingForm from './components/BookingForm.svelte';
   
+  export let data = {};
   let selectedDate = new Date();
+  
+  onMount(() => {
+    console.log('App mounted with data:', data);
+  });
 </script>
 
 <div class="min-h-screen bg-gray-50 py-8">

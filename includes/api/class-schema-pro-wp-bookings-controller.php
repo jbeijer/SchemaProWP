@@ -19,15 +19,60 @@ class SchemaProWP_Bookings_Controller extends SchemaProWP_REST_Controller {
      * Konstruktor
      */
     public function __construct() {
+        $this->namespace = 'schemaprowp/v1';
         $this->rest_base = 'bookings';
         $this->model = new SchemaProWP_Booking();
     }
 
     /**
-     * Registrera ytterligare routes
+     * Registrera routes.
      */
     public function register_routes() {
-        parent::register_routes();
+        // Register base collection routes
+        register_rest_route($this->namespace, '/' . $this->rest_base, array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array($this, 'get_items'),
+                'permission_callback' => array($this, 'get_items_permissions_check'),
+                'args'               => $this->get_collection_params(),
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array($this, 'create_item'),
+                'permission_callback' => array($this, 'create_item_permissions_check'),
+                'args'               => $this->get_endpoint_args_for_item_schema(true),
+            ),
+        ));
+
+        // Register single item routes
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/(?P<id>[\d]+)', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array($this, 'get_item'),
+                'permission_callback' => array($this, 'get_item_permissions_check'),
+                'args'               => array(
+                    'id' => array(
+                        'validate_callback' => 'rest_validate_request_arg',
+                    ),
+                ),
+            ),
+            array(
+                'methods'             => WP_REST_Server::EDITABLE,
+                'callback'            => array($this, 'update_item'),
+                'permission_callback' => array($this, 'update_item_permissions_check'),
+                'args'               => $this->get_endpoint_args_for_item_schema(false),
+            ),
+            array(
+                'methods'             => WP_REST_Server::DELETABLE,
+                'callback'            => array($this, 'delete_item'),
+                'permission_callback' => array($this, 'delete_item_permissions_check'),
+                'args'               => array(
+                    'id' => array(
+                        'validate_callback' => 'rest_validate_request_arg',
+                    ),
+                ),
+            ),
+        ));
 
         // Route för att avboka
         register_rest_route(

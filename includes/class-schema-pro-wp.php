@@ -83,8 +83,8 @@ class SchemaProWP {
     protected $version;
 
     public function __construct() {
-        if ( defined( 'SCHEMA_PRO_WP_VERSION' ) ) {
-            $this->version = SCHEMA_PRO_WP_VERSION;
+        if ( defined( 'SCHEMAPROWP_VERSION' ) ) {
+            $this->version = SCHEMAPROWP_VERSION;
         } else {
             $this->version = '1.0.0';
         }
@@ -143,21 +143,19 @@ class SchemaProWP {
 
         wp_register_script(
             'schema-pro-wp-admin',
-            SCHEMA_PRO_WP_PLUGIN_URL . 'dist/admin.js',
+            SCHEMAPROWP_PLUGIN_URL . 'dist/admin.js',
             array(),
-            SCHEMA_PRO_WP_VERSION,
+            $this->version,
             true
         );
 
-        // Add the data BEFORE enqueueing the script
         wp_localize_script(
             'schema-pro-wp-admin',
-            'schemaProWPData',
+            'schemaProWPAdmin',
             array(
-                'isAdminPage' => '1',
-                'ajaxUrl' => admin_url('admin-ajax.php'),
-                'restUrl' => get_rest_url(null, 'schemaprowp/v1'),
-                'nonce' => wp_create_nonce('wp_rest')
+                'apiRoot' => esc_url_raw( rest_url() ),
+                'nonce' => wp_create_nonce( 'wp_rest' ),
+                'currentUser' => get_current_user_id(),
             )
         );
 
@@ -165,13 +163,25 @@ class SchemaProWP {
     }
 
     public function enqueue_public_scripts() {
-        wp_enqueue_style('schemaprowp-style', SCHEMA_PRO_WP_PLUGIN_URL . 'dist/shared.css', array(), SCHEMA_PRO_WP_VERSION);
-        wp_enqueue_script('schemaprowp-public', SCHEMA_PRO_WP_PLUGIN_URL . 'dist/public.js', array(), SCHEMA_PRO_WP_VERSION, true);
+        wp_enqueue_style(
+            'schemaprowp-style', 
+            SCHEMAPROWP_PLUGIN_URL . 'dist/public.css', 
+            array(), 
+            $this->version
+        );
         
-        // Skicka data till JavaScript
+        wp_enqueue_script(
+            'schemaprowp-public',
+            SCHEMAPROWP_PLUGIN_URL . 'dist/public.js',
+            array(),
+            $this->version,
+            true
+        );
+
         wp_localize_script('schemaprowp-public', 'schemaProWPData', array(
-            'restUrl' => get_rest_url(null, 'schemaprowp/v1'),
-            'nonce' => wp_create_nonce('wp_rest')
+            'apiUrl' => esc_url_raw(rest_url('schemaprowp/v1')),
+            'nonce' => wp_create_nonce('wp_rest'),
+            'locale' => get_locale()
         ));
     }
 
@@ -188,7 +198,7 @@ class SchemaProWP {
     }
 
     public function display_plugin_admin_page() {
-        echo '<div id="schemaprowp-app" data-is-admin="1"></div>';
+        require_once SCHEMAPROWP_PLUGIN_DIR . 'admin/partials/schema-pro-wp-admin-display.php';
     }
 
     public function render_public_app() {
@@ -202,7 +212,7 @@ class SchemaProWP {
             'nonce' => wp_create_nonce('wp_rest')
         );
         
-        return '<div id="schemaprowp-app" data-wp-data="' . esc_attr(wp_json_encode($data)) . '"></div>';
+        return '<div class="schemaprowp-calendar" data-wp-data="' . esc_attr(wp_json_encode($data)) . '"></div>';
     }
 
     public function run() {
