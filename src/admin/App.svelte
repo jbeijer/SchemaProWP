@@ -2,6 +2,10 @@
   import { onMount } from 'svelte';
   
   export let data = {};
+
+  onMount(() => {
+    console.log('SchemaProWP Admin Data:', data);
+  });
 </script>
 
 <div class="wrap">
