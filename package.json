@@ -1,0 +1,16 @@
+{
+  "name": "schemaprowp",
+  "version": "1.0.0",
+  "description": "Advanced WordPress plugin for scheduling personnel and resources",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --mode admin && vite build --mode public",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "svelte": "^4.2.0",
+    "vite": "^5.0.0"
+  }
+}
