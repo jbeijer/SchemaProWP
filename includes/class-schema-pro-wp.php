@@ -119,8 +119,8 @@ class SchemaProWP {
     }
 
     private function define_public_hooks() {
-        $this->loader->add_action( 'wp_enqueue_scripts', $this, 'enqueue_public_scripts' );
-        $this->loader->add_shortcode( 'schemaprowp', $this, 'render_public_app' );
+        add_action('init', array($this, 'register_shortcodes'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_public_scripts'));
     }
 
     private function define_api_hooks() {
@@ -162,30 +162,76 @@ class SchemaProWP {
         wp_enqueue_script('schema-pro-wp-admin');
     }
 
-    public function enqueue_public_scripts() {
-        wp_enqueue_style(
-            'schemaprowp-style', 
-            SCHEMAPROWP_PLUGIN_URL . 'dist/public.css', 
-            array(), 
-            $this->version
+    /**
+     * Registrera och hantera shortcode för att visa bokningskalendern
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    public function register_shortcodes() {
+        add_shortcode('schemaprowp', array($this, 'render_public_app'));
+    }
+
+    /**
+     * Callback-funktion för shortcoden [schemaprowp]
+     * 
+     * @param array $atts Shortcode-attribut
+     * @return string HTML-output
+     */
+    public function render_public_app($atts = array()) {
+        wp_enqueue_script('schemaprowp-public');
+        wp_enqueue_style('schemaprowp-public');
+        
+        $atts = shortcode_atts(array(
+            'view' => 'month',
+            'organization' => '',
+        ), $atts, 'schemaprowp');
+        
+        $data = array(
+            'view' => sanitize_text_field($atts['view']),
+            'organization' => sanitize_text_field($atts['organization']),
+            'restUrl' => rest_url('schemaprowp/v1'),
+            'nonce' => wp_create_nonce('wp_rest')
         );
         
-        wp_register_script(
-            'schemaprowp-public',
-            SCHEMAPROWP_PLUGIN_URL . 'dist/public.js',
-            array('wp-api'),
-            $this->version,
-            true
-        );
+        return '<div class="schemaprowp-calendar" data-wp-data="' . esc_attr(json_encode($data)) . '"></div>';
+    }
 
-        wp_localize_script('schemaprowp-public', 'schemaProWPData', array(
-            'apiUrl' => esc_url_raw(rest_url('schemaprowp/v1')),
-            'nonce' => wp_create_nonce('wp_rest'),
-            'locale' => get_locale(),
-            'debug' => WP_DEBUG
-        ));
-
-        wp_enqueue_script('schemaprowp-public');
+    /**
+     * Registrera skript och stilar för frontend
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    public function enqueue_public_scripts() {
+        if (has_shortcode(get_the_content(), 'schemaprowp') || 
+            is_active_widget(false, false, 'schemaprowp_widget')) {
+            
+            wp_enqueue_script(
+                'schemaprowp-public',
+                plugin_dir_url(dirname(__FILE__)) . 'dist/public.js',
+                array(),
+                $this->version,
+                true
+            );
+            
+            wp_enqueue_style(
+                'schemaprowp-public',
+                plugin_dir_url(dirname(__FILE__)) . 'dist/public.css',
+                array(),
+                $this->version
+            );
+            
+            wp_localize_script(
+                'schemaprowp-public',
+                'schemaProWPData',
+                array(
+                    'restUrl' => rest_url('schemaprowp/v1'),
+                    'nonce' => wp_create_nonce('wp_rest'),
+                    'locale' => get_locale()
+                )
+            );
+        }
     }
 
     public function add_plugin_admin_menu() {
@@ -202,26 +248,6 @@ class SchemaProWP {
 
     public function display_plugin_admin_page() {
         require_once SCHEMAPROWP_PLUGIN_DIR . 'admin/partials/schema-pro-wp-admin-display.php';
-    }
-
-    public function render_public_app() {
-        // Se till att skripten är inladdade
-        if (!wp_script_is('schemaprowp-public', 'enqueued')) {
-            $this->enqueue_public_scripts();
-        }
-
-        $settings = array(
-            'restUrl' => get_rest_url(null, 'schemaprowp/v1'),
-            'nonce' => wp_create_nonce('wp_rest'),
-            'locale' => get_locale(),
-            'debug' => WP_DEBUG
-        );
-        
-        return sprintf(
-            '<div class="schemaprowp-calendar" data-settings="%s" id="schemaprowp-calendar-%s"></div>',
-            esc_attr(wp_json_encode($settings)),
-            uniqid()
-        );
     }
 
     public function run() {

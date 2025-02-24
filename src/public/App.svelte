@@ -4,11 +4,13 @@
   import ResourceList from './components/ResourceList.svelte';
   import BookingForm from './components/BookingForm.svelte';
   
-  export let data = {};
+  export let wpData = {};
   let selectedDate = new Date();
+  let view = wpData.view || 'month';
+  let organization = wpData.organization || '';
   
   onMount(() => {
-    console.log('App mounted with data:', data);
+    console.log('SchemaProWP: App monterad med data:', wpData);
   });
 </script>
 
@@ -17,14 +19,14 @@
     <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
       <!-- Sidopanel med resurser -->
       <div class="md:col-span-3">
-        <ResourceList />
+        <ResourceList {organization} />
       </div>
       
       <!-- Huvudinnehåll -->
       <div class="md:col-span-9">
         <div class="space-y-6">
-          <Calendar bind:selectedDate />
-          <BookingForm {selectedDate} />
+          <Calendar bind:selectedDate {view} />
+          <BookingForm {selectedDate} {organization} />
         </div>
       </div>
     </div>
