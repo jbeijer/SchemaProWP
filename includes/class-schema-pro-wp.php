@@ -173,28 +173,42 @@ class SchemaProWP {
     }
 
     /**
-     * Callback-funktion för shortcoden [schemaprowp]
+     * Callback function for the [schemaprowp] shortcode
      * 
-     * @param array $atts Shortcode-attribut
-     * @return string HTML-output
+     * @param array $atts Shortcode attributes
+     * @return string HTML output
      */
     public function render_public_app($atts = array()) {
+        // Scripts and styles
         wp_enqueue_script('schemaprowp-public');
         wp_enqueue_style('schemaprowp-public');
         
+        // Create attributes for data to pass to JS
         $atts = shortcode_atts(array(
             'view' => 'month',
             'organization' => '',
         ), $atts, 'schemaprowp');
         
+        // Prepare data for JS
         $data = array(
-            'view' => sanitize_text_field($atts['view']),
-            'organization' => sanitize_text_field($atts['organization']),
+            'view' => $atts['view'],
+            'organization' => $atts['organization'],
             'restUrl' => rest_url('schemaprowp/v1'),
             'nonce' => wp_create_nonce('wp_rest')
         );
         
-        return '<div class="schemaprowp-calendar" data-wp-data="' . esc_attr(json_encode($data)) . '"></div>';
+        // Make data available globally
+        wp_localize_script(
+            'schemaprowp-public',
+            'schemaProWPData',
+            $data
+        );
+        
+        // Return HTML container
+        return sprintf(
+            '<div class="schemaprowp-calendar" data-wp-data="%s"></div>',
+            esc_attr(json_encode($data))
+        );
     }
 
     /**
