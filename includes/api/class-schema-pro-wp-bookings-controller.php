@@ -127,56 +127,70 @@ class SchemaProWP_Bookings_Controller extends SchemaProWP_REST_Controller {
      * @return WP_REST_Response|WP_Error
      */
     public function get_items($request) {
-        $args = array();
-        
-        // Hantera filtrering
-        if (!empty($request['resource_id'])) {
-            $args['where']['resource_id'] = $request['resource_id'];
-        }
-        if (!empty($request['user_id'])) {
-            $args['where']['user_id'] = $request['user_id'];
-        }
-        if (!empty($request['status'])) {
-            $args['where']['status'] = $request['status'];
-        }
+        try {
+            // Test data for development
+            $test_bookings = array(
+                array(
+                    'id' => 1,
+                    'resource_id' => 1,
+                    'resource_name' => 'Konferensrum A',
+                    'user_id' => get_current_user_id(),
+                    'start_time' => '2025-03-01 09:00:00',
+                    'end_time' => '2025-03-01 11:00:00',
+                    'status' => 'confirmed'
+                ),
+                array(
+                    'id' => 2,
+                    'resource_id' => 2,
+                    'resource_name' => 'Projektor',
+                    'user_id' => get_current_user_id(),
+                    'start_time' => '2025-03-02 13:00:00',
+                    'end_time' => '2025-03-02 15:00:00',
+                    'status' => 'pending'
+                )
+            );
 
-        // Hantera tidsfiltrering
-        if (!empty($request['start_time']) && !empty($request['end_time'])) {
-            return $this->model->get_by_timespan(
-                $request['start_time'],
-                $request['end_time'],
-                $args
+            // For development, return test data
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                return rest_ensure_response($test_bookings);
+            }
+
+            // Real implementation
+            $args = array();
+
+            // Sanitize and validate request parameters
+            if (!empty($request['resource_id'])) {
+                $args['resource_id'] = absint($request['resource_id']);
+            }
+            if (!empty($request['user_id'])) {
+                $args['user_id'] = absint($request['user_id']);
+            }
+            if (!empty($request['start_date'])) {
+                $args['start_date'] = sanitize_text_field($request['start_date']);
+            }
+            if (!empty($request['end_date'])) {
+                $args['end_date'] = sanitize_text_field($request['end_date']);
+            }
+
+            $bookings = $this->model->get_bookings($args);
+            
+            if (is_wp_error($bookings)) {
+                return new WP_Error(
+                    'schemaprowp_db_error',
+                    __('Ett fel uppstod vid hämtning av bokningar.', 'schemaprowp'),
+                    array('status' => 500)
+                );
+            }
+
+            return rest_ensure_response($bookings);
+
+        } catch (Exception $e) {
+            return new WP_Error(
+                'schemaprowp_error',
+                $e->getMessage(),
+                array('status' => 500)
             );
         }
-
-        // Hantera paginering
-        if (!empty($request['per_page'])) {
-            $args['limit'] = $request['per_page'];
-            if (!empty($request['page'])) {
-                $args['offset'] = ($request['page'] - 1) * $request['per_page'];
-            }
-        }
-
-        // Hantera sortering
-        if (!empty($request['orderby'])) {
-            $args['orderby'] = $request['orderby'];
-        }
-        if (!empty($request['order'])) {
-            $args['order'] = $request['order'];
-        }
-
-        $items = $this->model->get_all($args);
-        
-        if (is_wp_error($items)) {
-            return $items;
-        }
-
-        $response = array();
-        foreach ($items as $item) {
-            $response[] = $this->prepare_item_for_response($item, $request);
-        }
-
-        return rest_ensure_response($response);
     }
 
     /**
@@ -447,6 +461,110 @@ class SchemaProWP_Bookings_Controller extends SchemaProWP_REST_Controller {
                     array('status' => 400)
                 );
             }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to get items
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function get_items_permissions_check($request) {
+        // Allow public access to view bookings
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to get a specific item
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function get_item_permissions_check($request) {
+        // Allow public access to view individual bookings
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to create items
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function create_item_permissions_check($request) {
+        // For creating bookings, require user to be logged in
+        if (!is_user_logged_in()) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('Du måste vara inloggad för att skapa bokningar.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
+        // Verify nonce for logged-in users
+        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
+            return new WP_Error(
+                'rest_forbidden_nonce',
+                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to update a specific item
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function update_item_permissions_check($request) {
+        if (!is_user_logged_in()) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('Du måste vara inloggad för att uppdatera bokningar.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
+        // Verify nonce for logged-in users
+        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
+            return new WP_Error(
+                'rest_forbidden_nonce',
+                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to delete a specific item
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function delete_item_permissions_check($request) {
+        if (!is_user_logged_in()) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('Du måste vara inloggad för att ta bort bokningar.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
+        // Verify nonce for logged-in users
+        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
+            return new WP_Error(
+                'rest_forbidden_nonce',
+                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
         }
 
         return true;

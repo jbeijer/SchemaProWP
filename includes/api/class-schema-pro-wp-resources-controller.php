@@ -61,27 +61,108 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
     }
 
     /**
-     * Kontrollera behörighet för att hämta resurser.
+     * Check if a given request has access to get items
      *
-     * @param WP_REST_Request $request Request object.
-     * @return bool|WP_Error True om tillåtet, WP_Error annars.
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
      */
     public function get_items_permissions_check($request) {
-        if (!current_user_can('edit_posts')) {
+        // Allow public access to view resources
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to get a specific item
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function get_item_permissions_check($request) {
+        // Allow public access to view individual resources
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to create items
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function create_item_permissions_check($request) {
+        // Only administrators can create resources
+        if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('Du har inte behörighet att visa resurser.', 'schemaprowp'),
+                __('Du har inte behörighet att skapa resurser.', 'schemaprowp'),
                 array('status' => rest_authorization_required_code())
             );
         }
 
+        // Verify nonce for admin users
         if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
             return new WP_Error(
                 'rest_forbidden_nonce',
-                __('Ogiltig nonce.', 'schemaprowp'),
+                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
                 array('status' => rest_authorization_required_code())
             );
         }
+
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to update a specific item
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function update_item_permissions_check($request) {
+        // Only administrators can update resources
+        if (!current_user_can('manage_options')) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('Du har inte behörighet att uppdatera resurser.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
+        // Verify nonce for admin users
+        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
+            return new WP_Error(
+                'rest_forbidden_nonce',
+                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if a given request has access to delete a specific item
+     *
+     * @param WP_REST_Request $request Full data about the request.
+     * @return WP_Error|bool
+     */
+    public function delete_item_permissions_check($request) {
+        // Only administrators can delete resources
+        if (!current_user_can('manage_options')) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('Du har inte behörighet att ta bort resurser.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
+        // Verify nonce for admin users
+        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
+            return new WP_Error(
+                'rest_forbidden_nonce',
+                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
+                array('status' => rest_authorization_required_code())
+            );
+        }
+
         return true;
     }
 
@@ -92,57 +173,61 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
      * @return WP_REST_Response|WP_Error Response object eller WP_Error.
      */
     public function get_items($request) {
-        $resource_model = new SchemaProWP_Resource();
-        $args = array();
+        try {
+            // Test data for development
+            $test_resources = array(
+                array(
+                    'id' => 1,
+                    'name' => 'Konferensrum A',
+                    'type' => 'room',
+                    'status' => 'available'
+                ),
+                array(
+                    'id' => 2,
+                    'name' => 'Projektor',
+                    'type' => 'equipment',
+                    'status' => 'available'
+                ),
+                array(
+                    'id' => 3,
+                    'name' => 'Tjänstebil',
+                    'type' => 'vehicle',
+                    'status' => 'available'
+                )
+            );
 
-        // Sanitera request parametrar
-        if (!empty($request['per_page'])) {
-            $args['per_page'] = absint($request['per_page']);
-        }
-        if (!empty($request['page'])) {
-            $args['page'] = absint($request['page']);
-        }
-        if (!empty($request['search'])) {
-            $args['search'] = sanitize_text_field($request['search']);
-        }
+            // For development, return test data
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                return rest_ensure_response($test_resources);
+            }
 
-        $resources = $resource_model->get_all($args);
-        
-        if (is_wp_error($resources)) {
-            return $resources;
-        }
+            // Real implementation
+            $resource_model = new SchemaProWP_Resource();
+            $args = array();
 
-        // Escape output
-        $resources = array_map(function($resource) use ($request) {
-            return $this->prepare_response_for_collection($resource, $request);
-        }, $resources);
-        
-        return rest_ensure_response($resources);
-    }
+            if (!empty($request['per_page'])) {
+                $args['per_page'] = absint($request['per_page']);
+            }
 
-    /**
-     * Kontrollera behörighet för att skapa resurs.
-     *
-     * @param WP_REST_Request $request Request object.
-     * @return bool|WP_Error True om tillåtet, WP_Error annars.
-     */
-    public function create_item_permissions_check($request) {
-        if (!current_user_can('manage_options')) {
+            $resources = $resource_model->get_resources($args);
+            
+            if (is_wp_error($resources)) {
+                return new WP_Error(
+                    'schemaprowp_db_error',
+                    __('Ett fel uppstod vid hämtning av resurser.', 'schemaprowp'),
+                    array('status' => 500)
+                );
+            }
+
+            return rest_ensure_response($resources);
+
+        } catch (Exception $e) {
             return new WP_Error(
-                'rest_forbidden',
-                __('Du har inte behörighet att skapa resurser.', 'schemaprowp'),
-                array('status' => rest_authorization_required_code())
+                'schemaprowp_error',
+                $e->getMessage(),
+                array('status' => 500)
             );
         }
-
-        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
-            return new WP_Error(
-                'rest_forbidden_nonce',
-                __('Ogiltig nonce.', 'schemaprowp'),
-                array('status' => rest_authorization_required_code())
-            );
-        }
-        return true;
     }
 
     /**

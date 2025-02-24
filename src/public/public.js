@@ -16,6 +16,21 @@ function initApp() {
     // Use global data if available
     const wpData = window.schemaProWPData || {};
     
+    // Validate and normalize API URL
+    if (!wpData.restUrl && !wpData.apiUrl) {
+        console.error('SchemaProWP: Ingen API URL tillgänglig');
+        return null;
+    }
+    
+    // Normalize API URL
+    wpData.apiUrl = wpData.restUrl || wpData.apiUrl;
+    if (!wpData.apiUrl.endsWith('/')) {
+        wpData.apiUrl += '/';
+    }
+    wpData.apiUrl += 'schemaprowp/v1';
+    
+    console.log('SchemaProWP: Använder API URL:', wpData.apiUrl);
+    
     // Create an app instance for each container
     return Array.from(containers).map(container => {
         try {
@@ -30,7 +45,11 @@ function initApp() {
             }
             
             // Combine data
-            const finalData = {...wpData, ...containerData};
+            const finalData = {
+                ...wpData,
+                ...containerData,
+                debug: process.env.NODE_ENV === 'development'
+            };
             
             console.log('SchemaProWP: Initierar app med data:', finalData);
             
@@ -46,15 +65,12 @@ function initApp() {
             
         } catch (error) {
             console.error('SchemaProWP: Fel vid initiering av app:', error);
-            
-            // Show error message in development mode
-            if (process.env.NODE_ENV === 'development') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'schemaprowp-error';
-                errorDiv.style.cssText = 'color: red; padding: 1em; border: 1px solid red; margin: 1em 0;';
-                errorDiv.textContent = `Fel vid initiering av kalender: ${error.message}`;
-                container.parentNode.insertBefore(errorDiv, container);
-            }
+            container.innerHTML = `
+                <div class="schemaprowp-error">
+                    <p>Ett fel uppstod vid initiering av bokningskalendern.</p>
+                    ${process.env.NODE_ENV === 'development' ? `<pre>${error.message}</pre>` : ''}
+                </div>
+            `;
             return null;
         }
     }).filter(Boolean); // Filter out any null instances from errors
