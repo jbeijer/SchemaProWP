@@ -1,71 +1,26 @@
 <?php
 /**
- * Basklass för REST API controllers
- *
- * @package    SchemaProWP
- * @subpackage SchemaProWP/includes/api
+ * Abstrakt basklass för REST API controllers.
  */
-
 abstract class SchemaProWP_REST_Controller {
     /**
-     * Namespace för API:et
+     * Namespace för REST API endpoints.
      *
      * @var string
      */
-    protected $namespace = 'schemaprowp/v1';
+    protected $namespace;
 
     /**
-     * Route för denna controller
+     * REST base för endpoints.
      *
      * @var string
      */
     protected $rest_base;
 
     /**
-     * Registrera routes
+     * Registrera routes.
      */
-    public function register_routes() {
-        register_rest_route(
-            $this->namespace,
-            '/' . $this->rest_base,
-            array(
-                array(
-                    'methods'             => WP_REST_Server::READABLE,
-                    'callback'            => array($this, 'get_items'),
-                    'permission_callback' => array($this, 'get_items_permissions_check'),
-                ),
-                array(
-                    'methods'             => WP_REST_Server::CREATABLE,
-                    'callback'            => array($this, 'create_item'),
-                    'permission_callback' => array($this, 'create_item_permissions_check'),
-                    'args'                => $this->get_endpoint_args_for_item_schema(true),
-                ),
-            )
-        );
-
-        register_rest_route(
-            $this->namespace,
-            '/' . $this->rest_base . '/(?P<id>[\d]+)',
-            array(
-                array(
-                    'methods'             => WP_REST_Server::READABLE,
-                    'callback'            => array($this, 'get_item'),
-                    'permission_callback' => array($this, 'get_item_permissions_check'),
-                ),
-                array(
-                    'methods'             => WP_REST_Server::EDITABLE,
-                    'callback'            => array($this, 'update_item'),
-                    'permission_callback' => array($this, 'update_item_permissions_check'),
-                    'args'                => $this->get_endpoint_args_for_item_schema(false),
-                ),
-                array(
-                    'methods'             => WP_REST_Server::DELETABLE,
-                    'callback'            => array($this, 'delete_item'),
-                    'permission_callback' => array($this, 'delete_item_permissions_check'),
-                ),
-            )
-        );
-    }
+    abstract public function register_routes();
 
     /**
      * Kontrollera om användaren har behörighet att läsa items
@@ -118,35 +73,53 @@ abstract class SchemaProWP_REST_Controller {
     }
 
     /**
-     * Förbereder ett item för response
+     * Validera request parametrar.
      *
-     * @param mixed           $item    Item att förbereda
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response
+     * @param array           $params  Request parametrar.
+     * @param WP_REST_Request $request Request object.
+     * @return true|WP_Error True om valid, WP_Error annars.
      */
-    public function prepare_item_for_response($item, $request) {
-        return rest_ensure_response($item);
+    protected function validate_request_params($params, $request) {
+        return true;
     }
 
     /**
-     * Hämta argument för endpoint baserat på schema
+     * Sanitera request parametrar.
      *
-     * @param bool $is_create Om detta är för create operation
-     * @return array
+     * @param array $params Request parametrar.
+     * @return array Saniterade parametrar.
      */
-    protected function get_endpoint_args_for_item_schema($is_create = false) {
+    protected function sanitize_request_params($params) {
+        return $params;
+    }
+
+    /**
+     * Förbereder ett item för response.
+     *
+     * @param mixed           $item    Item att förbereda.
+     * @param WP_REST_Request $request Request object.
+     * @return array Förberett item.
+     */
+    protected function prepare_response_for_collection($item, $request = null) {
+        return $item;
+    }
+
+    /**
+     * Hämta collection parametrar.
+     *
+     * @return array Collection parametrar.
+     */
+    protected function get_collection_params() {
         return array();
     }
 
     /**
-     * Sanitera och validera request parametrar
+     * Hämta endpoint argument för item schema.
      *
-     * @param array           $params  Request parametrar
-     * @param WP_REST_Request $request Full data om requesten
-     * @param string          $type    Typ av validering (create/update)
-     * @return true|WP_Error True om valid, WP_Error annars
+     * @param bool $is_create Om detta är för create operation.
+     * @return array Endpoint argument.
      */
-    protected function validate_request_params($params, $request, $type) {
-        return true;
+    protected function get_endpoint_args_for_item_schema($is_create = false) {
+        return array();
     }
 }

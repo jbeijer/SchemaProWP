@@ -53,26 +53,28 @@ export default defineConfig(({ command, mode }) => {
       }
     };
   }
-  
-  return {
-    ...sharedConfig,
-    build: {
-      ...sharedConfig.build,
-      outDir: 'dist',
-      lib: {
-        entry: path.resolve(__dirname, 'src/public/main.js'),
-        name: 'SchemaProWPPublic',
-        fileName: () => 'public.js',
-        formats: ['iife']
-      },
-      rollupOptions: {
-        output: {
-          assetFileNames: (assetInfo) => {
-            if (assetInfo.name === 'style.css') return 'public.css';
-            return `assets/public-[name].[ext]`;
+
+  if (mode === 'public') {
+    return {
+      ...sharedConfig,
+      build: {
+        ...sharedConfig.build,
+        outDir: 'dist',
+        lib: {
+          entry: path.resolve(__dirname, 'src/public/public.js'),
+          name: 'SchemaProWPPublic',
+          fileName: () => 'public.js',
+          formats: ['iife']
+        },
+        rollupOptions: {
+          output: {
+            assetFileNames: (assetInfo) => {
+              if (assetInfo.name === 'style.css') return 'public.css';
+              return `assets/public-[name].[ext]`;
+            }
           }
         }
       }
-    }
-  };
+    };
+  }
 });

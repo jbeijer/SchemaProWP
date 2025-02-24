@@ -1,11 +1,33 @@
 import './app.css';
 import App from './App.svelte';
 
-const app = new App({
-  target: document.getElementById('schemaprowp-admin'),
-  props: {
-    data: window.schemaProWPData || {}
+function initAdmin() {
+  const target = document.getElementById('schemaprowp-admin');
+  
+  if (!target) {
+    console.error('SchemaProWP: Admin container not found');
+    return;
   }
-});
+  
+  try {
+    const app = new App({
+      target,
+      props: {
+        data: window.schemaProWPData || {}
+      }
+    });
+    
+    return app;
+  } catch (error) {
+    console.error('SchemaProWP: Failed to initialize admin app:', error);
+  }
+}
 
-export default app;
+// Vänta tills DOM är redo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAdmin);
+} else {
+  initAdmin();
+}
+
+export default {};

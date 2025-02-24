@@ -162,7 +162,7 @@ class SchemaProWP_Bookings_Controller extends SchemaProWP_REST_Controller {
      * @return WP_REST_Response|WP_Error
      */
     public function create_item($request) {
-        $validation = $this->validate_request_params($request->get_params(), $request, 'create');
+        $validation = $this->validate_request_params($request->get_params(), $request);
         if (is_wp_error($validation)) {
             return $validation;
         }
@@ -190,7 +190,7 @@ class SchemaProWP_Bookings_Controller extends SchemaProWP_REST_Controller {
      * @return WP_REST_Response|WP_Error
      */
     public function update_item($request) {
-        $validation = $this->validate_request_params($request->get_params(), $request, 'update');
+        $validation = $this->validate_request_params($request->get_params(), $request);
         if (is_wp_error($validation)) {
             return $validation;
         }
@@ -345,17 +345,63 @@ class SchemaProWP_Bookings_Controller extends SchemaProWP_REST_Controller {
     }
 
     /**
-     * Validera request parametrar
+     * Validera request parametrar.
      *
-     * @param array           $params  Request parametrar
-     * @param WP_REST_Request $request Full data om requesten
-     * @param string          $type    Typ av validering (create/update)
-     * @return true|WP_Error True om valid, WP_Error annars
+     * @param array           $params  Request parametrar.
+     * @param WP_REST_Request $request Request object.
+     * @return true|WP_Error True om valid, WP_Error annars.
      */
-    protected function validate_request_params($params, $request, $type) {
-        $validation = $this->model->validate($params);
-        if (is_wp_error($validation)) {
-            return $validation;
+    protected function validate_request_params($params, $request) {
+        // Validera gemensamma fält
+        if (!empty($params['resource_id']) && !is_numeric($params['resource_id'])) {
+            return new WP_Error(
+                'rest_invalid_param',
+                __('Resource ID must be numeric.', 'schema-pro-wp'),
+                array('status' => 400)
+            );
+        }
+
+        if (!empty($params['start_time']) && !strtotime($params['start_time'])) {
+            return new WP_Error(
+                'rest_invalid_param',
+                __('Start time must be a valid date/time.', 'schema-pro-wp'),
+                array('status' => 400)
+            );
+        }
+
+        if (!empty($params['end_time']) && !strtotime($params['end_time'])) {
+            return new WP_Error(
+                'rest_invalid_param',
+                __('End time must be a valid date/time.', 'schema-pro-wp'),
+                array('status' => 400)
+            );
+        }
+
+        // Om detta är en create request
+        if ($request->get_method() === 'POST') {
+            if (empty($params['resource_id'])) {
+                return new WP_Error(
+                    'rest_missing_param',
+                    __('Resource ID is required.', 'schema-pro-wp'),
+                    array('status' => 400)
+                );
+            }
+
+            if (empty($params['start_time'])) {
+                return new WP_Error(
+                    'rest_missing_param',
+                    __('Start time is required.', 'schema-pro-wp'),
+                    array('status' => 400)
+                );
+            }
+
+            if (empty($params['end_time'])) {
+                return new WP_Error(
+                    'rest_missing_param',
+                    __('End time is required.', 'schema-pro-wp'),
+                    array('status' => 400)
+                );
+            }
         }
 
         return true;
