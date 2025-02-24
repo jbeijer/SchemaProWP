@@ -46,8 +46,13 @@ SchemaProWP använder WordPress REST API för att exponera följande endpoints. 
 - **GET** `/resources`
 - Beskrivning: Hämtar en lista över alla resurser
 - Parametrar:
-  - `organization_id` (valfri): Filtrera efter organisation
+  - `post_id` (valfri): Filtrera efter organisation (post_id)
   - `type` (valfri): Filtrera efter resurstyp
+  - `status` (valfri): Filtrera efter status
+  - `per_page` (valfri): Antal resultat per sida
+  - `page` (valfri): Sidnummer
+  - `orderby` (valfri): Sorteringsfält
+  - `order` (valfri): Sorteringsordning (asc/desc)
 
 ### Hämta en specifik resurs
 - **GET** `/resources/{id}`
@@ -59,13 +64,13 @@ SchemaProWP använder WordPress REST API för att exponera följande endpoints. 
 - Body: 
   ```json
   {
+    "post_id": 1,
     "name": "Resursnamn",
-    "organization_id": 1,
-    "type": "car",
-    "status": "available",
+    "type": "room",
+    "status": "active",
     "properties": {
-      "color": "red",
-      "seats": 5
+      "capacity": 10,
+      "equipment": ["projector", "whiteboard"]
     }
   }
   ```
@@ -77,7 +82,10 @@ SchemaProWP använder WordPress REST API för att exponera följande endpoints. 
   ```json
   {
     "name": "Nytt resursnamn",
-    "status": "under_maintenance"
+    "status": "inactive",
+    "properties": {
+      "capacity": 15
+    }
   }
   ```
 
@@ -93,8 +101,13 @@ SchemaProWP använder WordPress REST API för att exponera följande endpoints. 
 - Parametrar:
   - `resource_id` (valfri): Filtrera efter resurs
   - `user_id` (valfri): Filtrera efter användare
-  - `start_date` (valfri): Filtrera efter startdatum
-  - `end_date` (valfri): Filtrera efter slutdatum
+  - `status` (valfri): Filtrera efter status
+  - `start_time` (valfri): Filtrera efter startdatum/tid
+  - `end_time` (valfri): Filtrera efter slutdatum/tid
+  - `per_page` (valfri): Antal resultat per sida
+  - `page` (valfri): Sidnummer
+  - `orderby` (valfri): Sorteringsfält
+  - `order` (valfri): Sorteringsordning (asc/desc)
 
 ### Hämta en specifik bokning
 - **GET** `/bookings/{id}`
@@ -110,8 +123,8 @@ SchemaProWP använder WordPress REST API för att exponera följande endpoints. 
     "user_id": 1,
     "start_time": "2025-03-01T09:00:00",
     "end_time": "2025-03-01T10:00:00",
-    "status": "confirmed",
-    "comments": "Möte med kund"
+    "status": "pending",
+    "comments": "Projektmöte"
   }
   ```
 
@@ -121,14 +134,26 @@ SchemaProWP använder WordPress REST API för att exponera följande endpoints. 
 - Body: 
   ```json
   {
-    "status": "cancelled",
-    "comments": "Mötet har blivit inställt"
+    "status": "confirmed",
+    "comments": "Bekräftat projektmöte"
   }
   ```
 
 ### Ta bort en bokning
 - **DELETE** `/bookings/{id}`
 - Beskrivning: Tar bort en bokning
+
+### Avboka en bokning
+- **POST** `/bookings/{id}/cancel`
+- Beskrivning: Avbokar en bokning (sätter status till "cancelled")
+
+### Kontrollera tillgänglighet
+- **GET** `/bookings/available`
+- Beskrivning: Kontrollerar tillgängliga tider för en resurs
+- Parametrar:
+  - `resource_id` (obligatorisk): Resurs-ID att kontrollera
+  - `start_time` (obligatorisk): Startdatum/tid att kontrollera från
+  - `end_time` (obligatorisk): Slutdatum/tid att kontrollera till
 
 ## Användarorganisationer
 
@@ -165,4 +190,45 @@ SchemaProWP använder WordPress REST API för att exponera följande endpoints. 
 - **DELETE** `/user-organizations/{id}`
 - Beskrivning: Tar bort en användare från en organisation
 
-Notera att alla endpoints kräver autentisering och lämpliga behörigheter för att utföra de begärda åtgärderna.
+## Autentisering och behörigheter
+
+Alla endpoints kräver autentisering via WordPress inbyggda autentiseringssystem. För att använda API:et måste klienten:
+
+1. Vara inloggad i WordPress
+2. Skicka med en giltig nonce i headers eller som parameter
+3. Ha rätt behörigheter för den begärda åtgärden
+
+### Behörighetsnivåer
+
+- **Läsa** (GET): Kräver `read` capability
+- **Skriva** (POST, PUT, DELETE): Kräver `publish_posts` capability
+
+### Autentiseringsheaders
+
+```javascript
+{
+  'X-WP-Nonce': schemaProWPData.nonce
+}
+```
+
+## Felhantering
+
+API:et returnerar standardiserade felsvar enligt WordPress REST API:s format:
+
+```json
+{
+  "code": "error_code",
+  "message": "Beskrivande felmeddelande",
+  "data": {
+    "status": 400
+  }
+}
+```
+
+Vanliga felkoder:
+- `rest_resource_not_found`: Resursen kunde inte hittas (404)
+- `rest_booking_not_found`: Bokningen kunde inte hittas (404)
+- `rest_cannot_create`: Kunde inte skapa objektet (400)
+- `rest_cannot_update`: Kunde inte uppdatera objektet (400)
+- `rest_cannot_delete`: Kunde inte ta bort objektet (400)
+- `rest_validation_error`: Valideringsfel i indata (400)

@@ -93,10 +93,23 @@ class SchemaProWP {
         $this->load_dependencies();
         $this->define_admin_hooks();
         $this->define_public_hooks();
+        $this->define_api_hooks();
     }
 
     private function load_dependencies() {
+        // Grundläggande klasser
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-schema-pro-wp-loader.php';
+        
+        // Modeller
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/models/class-schema-pro-wp-model.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/models/class-schema-pro-wp-resource.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/models/class-schema-pro-wp-booking.php';
+        
+        // API Controllers
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/api/class-schema-pro-wp-rest-controller.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/api/class-schema-pro-wp-resources-controller.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/api/class-schema-pro-wp-bookings-controller.php';
+
         $this->loader = new SchemaProWP_Loader();
     }
 
@@ -108,6 +121,18 @@ class SchemaProWP {
     private function define_public_hooks() {
         $this->loader->add_action( 'wp_enqueue_scripts', $this, 'enqueue_public_scripts' );
         $this->loader->add_shortcode( 'schemaprowp', $this, 'render_public_app' );
+    }
+
+    private function define_api_hooks() {
+        $this->loader->add_action('rest_api_init', $this, 'register_rest_routes');
+    }
+
+    public function register_rest_routes() {
+        $resources_controller = new SchemaProWP_Resources_Controller();
+        $resources_controller->register_routes();
+
+        $bookings_controller = new SchemaProWP_Bookings_Controller();
+        $bookings_controller->register_routes();
     }
 
     public function enqueue_admin_scripts($hook) {
@@ -131,7 +156,8 @@ class SchemaProWP {
             array(
                 'isAdminPage' => '1',
                 'ajaxUrl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('schema_pro_wp_nonce')
+                'restUrl' => get_rest_url(null, 'schemaprowp/v1'),
+                'nonce' => wp_create_nonce('wp_rest')
             )
         );
 
@@ -139,18 +165,13 @@ class SchemaProWP {
     }
 
     public function enqueue_public_scripts() {
-        // Ta bort denna check eftersom vi vill att skripten ska laddas när render_public_app anropas
-        // if (!has_shortcode(get_post()->post_content, 'schemaprowp')) {
-        //     return;
-        // }
-
         wp_enqueue_style('schemaprowp-style', SCHEMA_PRO_WP_PLUGIN_URL . 'dist/shared.css', array(), SCHEMA_PRO_WP_VERSION);
         wp_enqueue_script('schemaprowp-public', SCHEMA_PRO_WP_PLUGIN_URL . 'dist/public.js', array(), SCHEMA_PRO_WP_VERSION, true);
         
         // Skicka data till JavaScript
         wp_localize_script('schemaprowp-public', 'schemaProWPData', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('schemaprowp_public_nonce')
+            'restUrl' => get_rest_url(null, 'schemaprowp/v1'),
+            'nonce' => wp_create_nonce('wp_rest')
         ));
     }
 
@@ -177,8 +198,8 @@ class SchemaProWP {
         }
 
         $data = array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('schemaprowp_public_nonce')
+            'restUrl' => get_rest_url(null, 'schemaprowp/v1'),
+            'nonce' => wp_create_nonce('wp_rest')
         );
         
         return '<div id="schemaprowp-app" data-wp-data="' . esc_attr(wp_json_encode($data)) . '"></div>';

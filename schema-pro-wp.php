@@ -26,29 +26,37 @@ define('SCHEMA_PRO_WP_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
  * The code that runs during plugin activation.
+ * This action is documented in includes/class-schema-pro-wp-activator.php
  */
 function activate_schema_pro_wp() {
-    // Activation logic here
+    require_once SCHEMA_PRO_WP_PLUGIN_DIR . 'includes/class-schema-pro-wp-activator.php';
+    Schema_Pro_WP_Activator::activate();
 }
 
 /**
  * The code that runs during plugin deactivation.
+ * This action is documented in includes/class-schema-pro-wp-deactivator.php
  */
 function deactivate_schema_pro_wp() {
-    // Deactivation logic here
+    require_once SCHEMA_PRO_WP_PLUGIN_DIR . 'includes/class-schema-pro-wp-deactivator.php';
+    Schema_Pro_WP_Deactivator::deactivate();
 }
 
 register_activation_hook(__FILE__, 'activate_schema_pro_wp');
 register_deactivation_hook(__FILE__, 'deactivate_schema_pro_wp');
 
 /**
- * Börjar exekvering av pluginen.
+ * The core plugin class that is used to define internationalization,
+ * admin-specific hooks, and public-facing site hooks.
+ */
+require SCHEMA_PRO_WP_PLUGIN_DIR . 'includes/class-schema-pro-wp.php';
+
+/**
+ * Begins execution of the plugin.
+ *
+ * @since    1.0.0
  */
 function run_schema_pro_wp() {
-    // Ladda huvudklassen
-    require_once plugin_dir_path(__FILE__) . 'includes/class-schema-pro-wp.php';
-    
-    // Skapa en instans av huvudklassen
     $plugin = new SchemaProWP();
     $plugin->run();
 }

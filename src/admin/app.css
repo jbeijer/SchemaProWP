@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* WordPress Admin-specifika anpassningar */
+#wpcontent {
+  @apply p-0;
+}
+
+.wrap {
+  @apply mx-auto max-w-7xl;
+}
+
+/* Färgtema som matchar WordPress admin */
+:root {
+  --wp-admin-theme-color: #2271b1;
+  --wp-admin-theme-color-darker-10: #1d5d90;
+  --wp-admin-theme-color-darker-20: #1a4d78;
+}
