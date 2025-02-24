@@ -170,10 +170,10 @@ class SchemaProWP {
             $this->version
         );
         
-        wp_enqueue_script(
+        wp_register_script(
             'schemaprowp-public',
             SCHEMAPROWP_PLUGIN_URL . 'dist/public.js',
-            array(),
+            array('wp-api'),
             $this->version,
             true
         );
@@ -181,8 +181,11 @@ class SchemaProWP {
         wp_localize_script('schemaprowp-public', 'schemaProWPData', array(
             'apiUrl' => esc_url_raw(rest_url('schemaprowp/v1')),
             'nonce' => wp_create_nonce('wp_rest'),
-            'locale' => get_locale()
+            'locale' => get_locale(),
+            'debug' => WP_DEBUG
         ));
+
+        wp_enqueue_script('schemaprowp-public');
     }
 
     public function add_plugin_admin_menu() {
@@ -207,12 +210,18 @@ class SchemaProWP {
             $this->enqueue_public_scripts();
         }
 
-        $data = array(
+        $settings = array(
             'restUrl' => get_rest_url(null, 'schemaprowp/v1'),
-            'nonce' => wp_create_nonce('wp_rest')
+            'nonce' => wp_create_nonce('wp_rest'),
+            'locale' => get_locale(),
+            'debug' => WP_DEBUG
         );
         
-        return '<div class="schemaprowp-calendar" data-wp-data="' . esc_attr(wp_json_encode($data)) . '"></div>';
+        return sprintf(
+            '<div class="schemaprowp-calendar" data-settings="%s" id="schemaprowp-calendar-%s"></div>',
+            esc_attr(wp_json_encode($settings)),
+            uniqid()
+        );
     }
 
     public function run() {
