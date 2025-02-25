@@ -24,12 +24,11 @@ function initApp() {
     
     // Normalize API URL
     wpData.apiUrl = wpData.restUrl || wpData.apiUrl;
-    if (!wpData.apiUrl.endsWith('/')) {
-        wpData.apiUrl += '/';
-    }
-    // Check if the path segment is already included in the URL
+    // Remove trailing slash if exists
+    wpData.apiUrl = wpData.apiUrl.replace(/\/$/, '');
+    // Add namespace if not present
     if (!wpData.apiUrl.includes('schemaprowp/v1')) {
-        wpData.apiUrl += 'schemaprowp/v1';
+        wpData.apiUrl += '/schemaprowp/v1';
     }
     
     console.log('SchemaProWP: Använder API URL:', wpData.apiUrl);

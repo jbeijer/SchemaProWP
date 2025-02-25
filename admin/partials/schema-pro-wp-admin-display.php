@@ -20,8 +20,10 @@ if ( ! defined( 'WPINC' ) ) {
             <h2><?php esc_html_e( 'Översikt', 'schemaprowp' ); ?></h2>
             <?php
             global $wpdb;
-            $resources_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}schemapro_resources" );
-            $bookings_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}schemapro_bookings" );
+            if (current_user_can('manage_options')) {
+                $resources_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}schemaprowp_resources" );
+                $bookings_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}schemapro_bookings" );
+            }
             ?>
             <div class="schemaprowp-stats-grid">
                 <div class="stat-box">

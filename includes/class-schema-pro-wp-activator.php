@@ -47,7 +47,7 @@ class SchemaProWP_Activator {
             return;
         }
         
-        $resources_table = $wpdb->prefix . 'schemapro_resources';
+        $resources_table = $wpdb->prefix . 'schemaprowp_resources';
         
         // Check if we already have test data
         $count = $wpdb->get_var("SELECT COUNT(*) FROM {$resources_table}");
@@ -113,49 +113,65 @@ class SchemaProWP_Activator {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
         
-        // Resources table
-        $table_name = $wpdb->prefix . 'schemapro_resources';
+        $table_name = $wpdb->prefix . 'schemaprowp_resources';
         $sql = "CREATE TABLE IF NOT EXISTS $table_name (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             title varchar(255) NOT NULL,
             description text,
-            type varchar(50) NOT NULL,
+            type varchar(50) NOT NULL DEFAULT 'room',
             status varchar(20) NOT NULL DEFAULT 'active',
-            metadata longtext,
-            created_by bigint(20) unsigned NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
-            KEY idx_{$table_name}_title (title),
-            KEY idx_{$table_name}_type (type),
-            KEY idx_{$table_name}_status (status),
-            KEY idx_{$table_name}_created_by (created_by)
-        ) $charset_collate;";
-
-        // Bookings table
-        $table_name = $wpdb->prefix . 'schemapro_bookings';
-        $sql .= "CREATE TABLE IF NOT EXISTS $table_name (
-            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            resource_id bigint(20) unsigned NOT NULL,
-            user_id bigint(20) unsigned NOT NULL,
-            start_time datetime NOT NULL,
-            end_time datetime NOT NULL,
-            status varchar(20) NOT NULL DEFAULT 'pending',
-            notes text,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id),
-            KEY idx_{$table_name}_resource (resource_id),
-            KEY idx_{$table_name}_user (user_id),
-            KEY idx_{$table_name}_status (status),
-            KEY idx_{$table_name}_timespan (start_time,end_time)
+            KEY idx_type (type),
+            KEY idx_status (status)
         ) $charset_collate;";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
-        
-        // Insert test data after creating tables
-        self::insert_test_data();
+
+        // Log any database errors
+        if (!empty($wpdb->last_error)) {
+            error_log('SchemaProWP: Database table creation error: ' . $wpdb->last_error);
+            return;
+        }
+
+        // Ensure some test data exists
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+        if ($count == 0) {
+            $test_resources = [
+                [
+                    'title' => 'Konferensrum A',
+                    'description' => 'Stort konferensrum för upp till 20 personer',
+                    'type' => 'room',
+                    'status' => 'active'
+                ],
+                [
+                    'title' => 'Projektor HD',
+                    'description' => 'Högkvalitativ projektor för presentationer',
+                    'type' => 'equipment',
+                    'status' => 'active'
+                ],
+                [
+                    'title' => 'Tjänstebil Tesla Model 3',
+                    'description' => 'Elektrisk tjänstebil för företagsresor',
+                    'type' => 'vehicle',
+                    'status' => 'active'
+                ]
+            ];
+
+            foreach ($test_resources as $resource) {
+                $wpdb->insert(
+                    $table_name, 
+                    array_map('sanitize_text_field', $resource),
+                    ['%s', '%s', '%s', '%s']
+                );
+                
+                if (!empty($wpdb->last_error)) {
+                    error_log('SchemaProWP: Error inserting test data: ' . $wpdb->last_error);
+                }
+            }
+        }
     }
 
     /**

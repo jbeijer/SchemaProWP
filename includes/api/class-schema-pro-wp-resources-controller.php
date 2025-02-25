@@ -131,39 +131,45 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
      */
     public function get_items($request) {
         try {
-            // Process request parameters
-            $args = array(
-                'per_page' => $request->get_param('per_page') ? (int) $request->get_param('per_page') : 10,
-                'page' => $request->get_param('page') ? (int) $request->get_param('page') : 1,
+            if (!current_user_can('read')) {
+                return new WP_Error(
+                    'rest_forbidden',
+                    'Sorry, you are not allowed to access resources.',
+                    ['status' => rest_authorization_required_code()]
+                );
+            }
+
+            $resource_model = new SchemaProWP_Resource();
+            
+            // Prepare query arguments from request
+            $args = [
+                'per_page' => $request->get_param('per_page') ?: 10,
+                'page' => $request->get_param('page') ?: 1,
+                'type' => $request->get_param('type') ?: '',
+                'status' => $request->get_param('status') ?: '',
                 'orderby' => $request->get_param('orderby') ?: 'id',
-                'order' => $request->get_param('order') ?: 'DESC',
-            );
+                'order' => $request->get_param('order') ?: 'DESC'
+            ];
 
-            // Get resources from the model
-            $result = $this->resource_model->get_all($args);
-
+            $result = $resource_model->get_all($args);
+            
             if (is_wp_error($result)) {
                 return $result;
             }
 
-            // Prepare items for response
-            $items = array_map(array($this, 'prepare_response_for_collection'), $result['items']);
-
-            // Prepare response
-            $response = rest_ensure_response($items);
-
-            // Add pagination headers
+            // Return items with pagination headers
+            $response = rest_ensure_response($result['items']);
             $response->header('X-WP-Total', $result['total']);
-            $response->header('X-WP-TotalPages', ceil($result['total'] / $result['per_page']));
+            $response->header('X-WP-TotalPages', $result['pages']);
 
             return $response;
 
         } catch (Exception $e) {
-            error_log('SchemaProWP REST API Error: ' . $e->getMessage());
+            error_log('SchemaProWP: API Error in get_items: ' . $e->getMessage());
             return new WP_Error(
-                'rest_error',
-                'An error occurred while processing your request.',
-                array('status' => 500)
+                'schemaprowp_api_error',
+                'An error occurred while fetching resources: ' . $e->getMessage(),
+                ['status' => 500]
             );
         }
     }
@@ -311,8 +317,8 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
     protected function sanitize_request_params($params) {
         $sanitized = array();
         
-        if (!empty($params['title'])) {
-            $sanitized['title'] = sanitize_text_field($params['title']);
+        if (!empty($params['name'])) {
+            $sanitized['name'] = sanitize_text_field($params['name']);
         }
         
         if (!empty($params['description'])) {
@@ -325,6 +331,10 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
         
         if (!empty($params['status'])) {
             $sanitized['status'] = sanitize_text_field($params['status']);
+        }
+
+        if (isset($params['post_id'])) {
+            $sanitized['post_id'] = absint($params['post_id']);
         }
         
         return $sanitized;
@@ -340,10 +350,18 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
     protected function validate_request_params($params, $request) {
         $errors = new WP_Error();
         
-        if (empty($params['title'])) {
+        if (empty($params['name'])) {
             $errors->add(
-                'missing_title',
-                __('Title is required.', 'schemaprowp'),
+                'missing_name',
+                __('Name is required.', 'schemaprowp'),
+                array('status' => 400)
+            );
+        }
+
+        if (!isset($params['post_id'])) {
+            $errors->add(
+                'missing_post_id',
+                __('Post ID is required.', 'schemaprowp'),
                 array('status' => 400)
             );
         }
@@ -399,7 +417,7 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
                 'description' => __('Sort collection by parameter.', 'schemaprowp'),
                 'type' => 'string',
                 'default' => 'id',
-                'enum' => array('id', 'title', 'type', 'status', 'created_at'),
+                'enum' => array('id', 'name', 'type', 'status', 'created_at'),
             ),
             'order' => array(
                 'description' => __('Order sort attribute ascending or descending.', 'schemaprowp'),
@@ -420,7 +438,7 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
     public function prepare_response_for_collection($item) {
         return array(
             'id' => absint($item['id']),
-            'title' => sanitize_text_field($item['title']),
+            'name' => sanitize_text_field($item['name']),
             'description' => wp_kses_post($item['description']),
             'type' => sanitize_text_field($item['type']),
             'status' => sanitize_text_field($item['status']),
@@ -440,8 +458,8 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
         
         if (WP_REST_Server::CREATABLE === $method || WP_REST_Server::EDITABLE === $method) {
             $args = array(
-                'title' => array(
-                    'description' => __('The title of the resource.', 'schemaprowp'),
+                'name' => array(
+                    'description' => __('The name of the resource.', 'schemaprowp'),
                     'type' => 'string',
                     'required' => true,
                     'sanitize_callback' => 'sanitize_text_field',
@@ -464,6 +482,11 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
                     'required' => false,
                     'default' => 'active',
                     'enum' => array('active', 'inactive', 'maintenance'),
+                ),
+                'post_id' => array(
+                    'description' => __('The post ID of the resource.', 'schemaprowp'),
+                    'type' => 'integer',
+                    'required' => true,
                 ),
             );
         }

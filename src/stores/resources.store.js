@@ -15,7 +15,7 @@ export const fetchResources = async (apiUrl, nonce) => {
     errors.update(e => ({ ...e, resources: null }));
     
     try {
-        const response = await fetch(`${apiUrl}resources`, {
+        const response = await fetch(`${apiUrl}/resources`, {
             headers: {
                 'X-WP-Nonce': nonce,
                 'Content-Type': 'application/json'
@@ -43,7 +43,7 @@ export const createResource = async (apiUrl, nonce, resourceData) => {
     errors.update(e => ({ ...e, resources: null }));
     
     try {
-        const response = await fetch(`${apiUrl}resources`, {
+        const response = await fetch(`${apiUrl}/resources`, {
             method: 'POST',
             headers: {
                 'X-WP-Nonce': nonce,
@@ -75,7 +75,7 @@ export const updateResource = async (apiUrl, nonce, resourceId, resourceData) =>
     errors.update(e => ({ ...e, resources: null }));
     
     try {
-        const response = await fetch(`${apiUrl}resources/${resourceId}`, {
+        const response = await fetch(`${apiUrl}/resources/${resourceId}`, {
             method: 'PUT',
             headers: {
                 'X-WP-Nonce': nonce,
@@ -111,7 +111,7 @@ export const deleteResource = async (apiUrl, nonce, resourceId) => {
     errors.update(e => ({ ...e, resources: null }));
     
     try {
-        const response = await fetch(`${apiUrl}resources/${resourceId}`, {
+        const response = await fetch(`${apiUrl}/resources/${resourceId}`, {
             method: 'DELETE',
             headers: {
                 'X-WP-Nonce': nonce,

@@ -12,9 +12,8 @@ class SchemaProWP_Resource extends SchemaProWP_Model {
      * Konstruktor
      */
     public function __construct() {
-        parent::__construct();
         global $wpdb;
-        $this->table_name = $wpdb->prefix . 'schemapro_resources';
+        $this->table_name = $wpdb->prefix . 'schemaprowp_resources';
     }
 
     /**
@@ -107,62 +106,103 @@ class SchemaProWP_Resource extends SchemaProWP_Model {
             global $wpdb;
             $table_name = $this->get_table_name();
 
-            // Default query arguments
+            // Validate and sanitize input
             $defaults = array(
                 'per_page' => 10,
                 'page' => 1,
                 'orderby' => 'id',
-                'order' => 'DESC'
+                'order' => 'DESC',
+                'type' => '',
+                'status' => ''
             );
             $args = wp_parse_args($args, $defaults);
 
-            // Sanitize inputs
-            $orderby = sanitize_sql_orderby($args['orderby'] . ' ' . $args['order']) ?: 'id DESC';
-            $per_page = absint($args['per_page']);
-            $offset = absint(($args['page'] - 1) * $per_page);
+            // Sanitize order and orderby to prevent SQL injection
+            $valid_order = sanitize_text_field(strtoupper($args['order'])) === 'ASC' ? 'ASC' : 'DESC';
+            $valid_orderby = in_array($args['orderby'], ['id', 'title', 'type', 'status', 'created_at']) 
+                ? sanitize_text_field($args['orderby']) 
+                : 'id';
 
-            // Count total items
-            $count_query = "SELECT COUNT(*) FROM {$table_name}";
+            // Calculate offset
+            $page = max(1, absint($args['page']));
+            $per_page = max(1, absint($args['per_page']));
+            $offset = ($page - 1) * $per_page;
+
+            // Prepare WHERE clause
+            $where_conditions = array();
+            $where_values = array();
+
+            if (!empty($args['type'])) {
+                $where_conditions[] = 'type = %s';
+                $where_values[] = sanitize_text_field($args['type']);
+            }
+
+            if (!empty($args['status'])) {
+                $where_conditions[] = 'status = %s';
+                $where_values[] = sanitize_text_field($args['status']);
+            }
+
+            $where_sql = !empty($where_conditions) 
+                ? 'WHERE ' . implode(' AND ', $where_conditions) 
+                : '';
+
+            // Prepare count query
+            $count_query = $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} {$where_sql}",
+                $where_values
+            );
+
+            // Execute count query with error handling
             $total_items = $wpdb->get_var($count_query);
 
             if ($total_items === null) {
+                error_log('SchemaProWP: Resource count query failed: ' . $wpdb->last_error);
+                
                 return new WP_Error(
-                    'resource_count_error',
-                    'Failed to count resources',
-                    array('status' => 500)
+                    'resource_count_error', 
+                    'Failed to count resources: ' . $wpdb->last_error, 
+                    ['status' => 500]
                 );
             }
 
-            // Fetch items
+            // Prepare items query
             $query = $wpdb->prepare(
                 "SELECT * FROM {$table_name} 
-                ORDER BY {$orderby}
+                {$where_sql}
+                ORDER BY {$valid_orderby} {$valid_order} 
                 LIMIT %d OFFSET %d",
-                $per_page,
-                $offset
+                array_merge($where_values, [$per_page, $offset])
             );
 
+            // Execute items query
             $items = $wpdb->get_results($query, ARRAY_A);
 
             if ($items === null) {
+                error_log('SchemaProWP: Resource query failed: ' . $wpdb->last_error);
+                
                 return new WP_Error(
-                    'resource_query_error',
-                    'Failed to fetch resources',
-                    array('status' => 500)
+                    'resource_query_error', 
+                    'Failed to fetch resources: ' . $wpdb->last_error, 
+                    ['status' => 500]
                 );
             }
 
-            return array(
+            // Return results with pagination
+            return [
                 'items' => $items,
-                'total' => (int) $total_items,
+                'total' => (int)$total_items,
+                'page' => $page,
+                'per_page' => $per_page,
                 'pages' => ceil($total_items / $per_page)
-            );
+            ];
 
         } catch (Exception $e) {
+            error_log('SchemaProWP: Unexpected error in resource retrieval: ' . $e->getMessage());
+            
             return new WP_Error(
-                'resource_error',
-                $e->getMessage(),
-                array('status' => 500)
+                'resource_unexpected_error', 
+                'An unexpected error occurred: ' . $e->getMessage(), 
+                ['status' => 500]
             );
         }
     }

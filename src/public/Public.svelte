@@ -1,6 +1,7 @@
 <script>
 import { onMount } from 'svelte';
 import { resources, loading, errors, fetchResources } from '../stores/resources.store.js';
+import CreateResource from './components/CreateResource.svelte';
 
 export let wpData;
 
@@ -38,6 +39,7 @@ onMount(() => {
             </div>
         {/if}
     </section>
+    <CreateResource {wpData} />
 </div>
 
 <style>

@@ -32,6 +32,8 @@ class SchemaProWP_Public {
         wp_localize_script('schema-pro-wp-public', 'schemaProWP', array(
             'nonce' => wp_create_nonce('wp_rest'),
             'apiUrl' => rest_url('schemaprowp/v1'),
+            'postId' => get_the_ID(),
+            'organizationId' => get_the_ID(),
         ));
     }
 }
