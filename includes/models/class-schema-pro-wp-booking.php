@@ -70,6 +70,72 @@ class SchemaProWP_Booking extends SchemaProWP_Model {
     }
 
     /**
+     * Hämta bokningar med filtrering
+     *
+     * @param array $args Argument för filtrering
+     *                    Möjliga argument:
+     *                    - resource_id: int
+     *                    - user_id: int
+     *                    - start_date: string (Y-m-d format)
+     *                    - end_date: string (Y-m-d format)
+     *                    - status: string
+     * @return array|WP_Error Array med bokningar eller WP_Error vid fel
+     */
+    public function get_bookings($args = array()) {
+        $table = $this->get_table_name();
+        $where = array();
+        $values = array();
+
+        // Filtrera på resurs
+        if (!empty($args['resource_id'])) {
+            $where[] = 'resource_id = %d';
+            $values[] = absint($args['resource_id']);
+        }
+
+        // Filtrera på användare
+        if (!empty($args['user_id'])) {
+            $where[] = 'user_id = %d';
+            $values[] = absint($args['user_id']);
+        }
+
+        // Filtrera på datum
+        if (!empty($args['start_date'])) {
+            $where[] = 'DATE(start_time) >= %s';
+            $values[] = $args['start_date'];
+        }
+        if (!empty($args['end_date'])) {
+            $where[] = 'DATE(end_time) <= %s';
+            $values[] = $args['end_date'];
+        }
+
+        // Filtrera på status
+        if (!empty($args['status'])) {
+            $where[] = 'status = %s';
+            $values[] = $args['status'];
+        }
+
+        // Bygg WHERE-sats
+        $where_clause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        // Förbered och kör frågan
+        $sql = $this->db->prepare(
+            "SELECT * FROM {$table} {$where_clause} ORDER BY start_time ASC",
+            $values
+        );
+
+        $results = $this->db->get_results($sql);
+        
+        if ($results === false) {
+            return new WP_Error(
+                'database_error',
+                __('Ett fel uppstod vid hämtning av bokningar från databasen.', 'schemaprowp')
+            );
+        }
+
+        return $results;
+    }
+
+    /**
      * Validera bokningsdata
      *
      * @param array $data Data att validera

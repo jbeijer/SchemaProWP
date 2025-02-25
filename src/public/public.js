@@ -48,7 +48,7 @@ function initApp() {
             const finalData = {
                 ...wpData,
                 ...containerData,
-                debug: process.env.NODE_ENV === 'development'
+                debug: window.__DEV__ || false
             };
             
             console.log('SchemaProWP: Initierar app med data:', finalData);
@@ -68,7 +68,7 @@ function initApp() {
             container.innerHTML = `
                 <div class="schemaprowp-error">
                     <p>Ett fel uppstod vid initiering av bokningskalendern.</p>
-                    ${process.env.NODE_ENV === 'development' ? `<pre>${error.message}</pre>` : ''}
+                    ${window.__DEV__ ? `<pre>${error.message}</pre>` : ''}
                 </div>
             `;
             return null;
