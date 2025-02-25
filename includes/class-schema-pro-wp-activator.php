@@ -26,6 +26,22 @@ class SchemaProWP_Activator {
      * @return void
      */
     public static function activate() {
+        global $wpdb;
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        // Create organizations table
+        $table_name = $wpdb->prefix . 'schemapro_organizations';
+        $sql = "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            parent_id mediumint(9) DEFAULT NULL,
+            PRIMARY KEY (id)
+        ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
         self::create_database_tables();
         self::create_default_options();
         self::register_post_types();

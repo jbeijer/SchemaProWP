@@ -109,6 +109,8 @@ class SchemaProWP {
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/api/class-schema-pro-wp-rest-controller.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/api/class-schema-pro-wp-resources-controller.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/api/class-schema-pro-wp-bookings-controller.php';
+        // Lägg till den nya organizations-controllern
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/api/class-schema-pro-wp-organizations-controller.php';
 
         $this->loader = new SchemaProWP_Loader();
     }
@@ -121,6 +123,8 @@ class SchemaProWP {
     private function define_public_hooks() {
         add_action('init', array($this, 'register_shortcodes'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_public_scripts'));
+        add_action('init', array($this, 'register_post_types'));
+        add_action('init', array($this, 'register_meta_fields'));
     }
 
     private function define_api_hooks() {
@@ -133,6 +137,10 @@ class SchemaProWP {
 
         $bookings_controller = new SchemaProWP_Bookings_Controller();
         $bookings_controller->register_routes();
+        
+        // Lägg till den nya controllern för organisationer
+        $organizations_controller = new SchemaProWP_Organizations_Controller();
+        $organizations_controller->register_routes();
     }
 
     public function enqueue_admin_scripts($hook) {
@@ -246,6 +254,91 @@ class SchemaProWP {
                 )
             );
         }
+    }
+
+    public function register_post_types() {
+        // Register organizations CPT
+        register_post_type('schemapro_org',
+            array(
+                'labels' => array(
+                    'name' => __('Organizations', 'schemaprowp'),
+                    'singular_name' => __('Organization', 'schemaprowp')
+                ),
+                'public' => true,
+                'show_in_rest' => true,
+                'supports' => array('title', 'editor'),
+                'rewrite' => array('slug' => 'organizations'),
+                'capability_type' => 'post',
+                'has_archive' => true
+            )
+        );
+    }
+
+    public function register_meta_fields() {
+        // Contact info
+        register_meta('post', 'organization_email', array(
+            'show_in_rest' => true,
+            'single' => true,
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_email',
+            'auth_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        register_meta('post', 'organization_phone', array(
+            'show_in_rest' => true,
+            'single' => true,
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'auth_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        // Website and logo
+        register_meta('post', 'organization_website', array(
+            'show_in_rest' => true,
+            'single' => true,
+            'type' => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'auth_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        register_meta('post', 'organization_logo', array(
+            'show_in_rest' => true,
+            'single' => true,
+            'type' => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'auth_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        // Location data
+        register_meta('post', 'organization_location', array(
+            'show_in_rest' => array(
+                'schema' => array(
+                    'type' => 'object',
+                    'properties' => array(
+                        'streetAddress' => array('type' => 'string'),
+                        'city' => array('type' => 'string'),
+                        'postalCode' => array('type' => 'string'),
+                        'country' => array('type' => 'string')
+                    )
+                )
+            ),
+            'single' => true,
+            'type' => 'object',
+            'sanitize_callback' => function($value) {
+                return array_map('sanitize_text_field', $value);
+            },
+            'auth_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
     }
 
     public function add_plugin_admin_menu() {
