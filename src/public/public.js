@@ -14,7 +14,10 @@ function initApp() {
     }
     
     // Use global data if available
-    const wpData = window.schemaProWPData || {};
+    const wpData = {
+        ...window.schemaProWPData,
+        post_id: window.schemaProWPData.post_id || 0 // Use default value if not present
+    };
     
     // Validate and normalize API URL
     if (!wpData.restUrl && !wpData.apiUrl) {

@@ -44,6 +44,19 @@ export const fetchResources = async (apiUrl, nonce, post_id) => {
 
 // Create a new resource
 export const createResource = async (apiUrl, nonce, resourceData) => {
+    // Check if post_id exists
+    if (!resourceData.post_id) {
+        console.warn('Attempting to create resource without post_id, using default');
+        resourceData.post_id = 0; // Use 0 or a default value that works in your system
+    }
+
+    // Validate resource type
+    const validTypes = ['room', 'equipment'];
+    if (!resourceData.type || !validTypes.includes(resourceData.type)) {
+        console.warn('Invalid or missing resource type, defaulting to room');
+        resourceData.type = 'room';
+    }
+
     loading.update(l => ({ ...l, resources: true }));
     errors.update(e => ({ ...e, resources: null }));
     

@@ -358,12 +358,9 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
             );
         }
 
+        // Make post_id optional with default value
         if (!isset($params['post_id'])) {
-            $errors->add(
-                'missing_post_id',
-                __('Post ID is required.', 'schemaprowp'),
-                array('status' => 400)
-            );
+            $params['post_id'] = 0; // Default value for "no parent organization"
         }
         
         if (!empty($params['type'])) {
@@ -486,7 +483,8 @@ class SchemaProWP_Resources_Controller extends WP_REST_Controller {
                 'post_id' => array(
                     'description' => __('The post ID of the resource.', 'schemaprowp'),
                     'type' => 'integer',
-                    'required' => true,
+                    'required' => false,
+                    'default' => 0,
                 ),
             );
         }

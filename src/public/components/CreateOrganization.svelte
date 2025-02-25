@@ -57,8 +57,14 @@ async function handleSubmit() {
     errorMessage = '';
     successMessage = '';
 
+    // Add post_id to organizationData before sending
+    const organizationData = {
+        ...organization,
+        post_id: wpData.post_id || wpData.organization || 0 // Use wpData.post_id or default value
+    };
+
     try {
-        await createResource(wpData.apiUrl, wpData.nonce, organization);
+        await createResource(wpData.apiUrl, wpData.nonce, organizationData);
         successMessage = 'Organization created successfully!';
         organization = {
             type: 'Organization',
