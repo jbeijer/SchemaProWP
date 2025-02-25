@@ -34,12 +34,82 @@ class SchemaProWP_Activator {
     }
 
     /**
+     * Insert test data for development
+     *
+     * @since  1.0.0
+     * @return void
+     */
+    public static function insert_test_data() {
+        global $wpdb;
+        
+        // Only insert test data if we're in a development environment
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+        
+        $resources_table = $wpdb->prefix . 'schemapro_resources';
+        
+        // Check if we already have test data
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$resources_table}");
+        if ($count > 0) {
+            return;
+        }
+        
+        // Insert test resources
+        $test_resources = array(
+            array(
+                'title' => 'Konferensrum A',
+                'description' => 'Ett stort konferensrum med plats för 20 personer',
+                'type' => 'room',
+                'status' => 'active',
+                'created_by' => get_current_user_id(),
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql')
+            ),
+            array(
+                'title' => 'Projektor HD-1080',
+                'description' => 'Högkvalitativ projektor för presentationer',
+                'type' => 'equipment',
+                'status' => 'active',
+                'created_by' => get_current_user_id(),
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql')
+            ),
+            array(
+                'title' => 'Tjänstebil VW ID.4',
+                'description' => 'Elektrisk tjänstebil för företagsresor',
+                'type' => 'vehicle',
+                'status' => 'active',
+                'created_by' => get_current_user_id(),
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql')
+            )
+        );
+        
+        foreach ($test_resources as $resource) {
+            $wpdb->insert(
+                $resources_table,
+                $resource,
+                array(
+                    '%s', // title
+                    '%s', // description
+                    '%s', // type
+                    '%s', // status
+                    '%d', // created_by
+                    '%s', // created_at
+                    '%s'  // updated_at
+                )
+            );
+        }
+    }
+
+    /**
      * Create required database tables
      *
      * @since  1.0.0
      * @return void
      */
-    private static function create_database_tables() {
+    public static function create_database_tables() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
         
@@ -82,7 +152,10 @@ class SchemaProWP_Activator {
         ) $charset_collate;";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta( $sql );
+        dbDelta($sql);
+        
+        // Insert test data after creating tables
+        self::insert_test_data();
     }
 
     /**

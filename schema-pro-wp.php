@@ -17,6 +17,11 @@ if ( ! defined( 'WPINC' ) ) {
     die;
 }
 
+// Enable debug mode for development
+if (!defined('WP_DEBUG')) {
+    define('WP_DEBUG', true);
+}
+
 /**
  * Current plugin version.
  * Start at version 1.0.0 and use SemVer - https://semver.org

@@ -13,7 +13,7 @@ class SchemaProWP_Resource extends SchemaProWP_Model {
      */
     public function __construct() {
         parent::__construct();
-        $this->table_name = 'schemaprowp_resources';
+        $this->table_name = 'schemapro_resources';
     }
 
     /**
@@ -84,6 +84,110 @@ class SchemaProWP_Resource extends SchemaProWP_Model {
         );
         
         return $this->db->get_results($sql);
+    }
+
+    /**
+     * Hämta alla resurser
+     *
+     * @param array $args Extra argument för filtrering
+     * @return array|WP_Error
+     */
+    public function get_all($args = array()) {
+        try {
+            // Prepare query arguments
+            $defaults = array(
+                'orderby' => 'title',
+                'order' => 'ASC',
+                'per_page' => 10,
+                'page' => 1,
+                'type' => '',
+                'status' => 'active',
+                'search' => ''
+            );
+            
+            $args = wp_parse_args($args, $defaults);
+            $table = $this->get_table_name();
+            
+            // Build WHERE clause
+            $where = array();
+            $values = array();
+            
+            if (!empty($args['type'])) {
+                $where[] = 'type = %s';
+                $values[] = $args['type'];
+            }
+            
+            if (!empty($args['status'])) {
+                $where[] = 'status = %s';
+                $values[] = $args['status'];
+            }
+            
+            if (!empty($args['search'])) {
+                $where[] = '(title LIKE %s OR description LIKE %s)';
+                $search_term = '%' . $this->db->esc_like($args['search']) . '%';
+                $values[] = $search_term;
+                $values[] = $search_term;
+            }
+            
+            if (!empty($args['where'])) {
+                foreach ($args['where'] as $field => $value) {
+                    $where[] = "r.{$field} = %s";
+                    $values[] = $value;
+                }
+            }
+            
+            $where_clause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+            
+            // Calculate offset
+            $offset = ($args['page'] - 1) * $args['per_page'];
+            
+            // Get total count for pagination
+            $count_sql = "SELECT COUNT(*) FROM {$table} {$where_clause}";
+            if (!empty($values)) {
+                $count_sql = $this->db->prepare($count_sql, $values);
+            }
+            $total_items = $this->db->get_var($count_sql);
+            
+            if ($total_items === null) {
+                return new WP_Error(
+                    'db_error',
+                    __('Ett fel uppstod vid hämtning av resurser.', 'schemaprowp'),
+                    array('status' => 500)
+                );
+            }
+            
+            // Get paginated results
+            $sql = "SELECT * FROM {$table} 
+                   {$where_clause} 
+                   ORDER BY {$args['orderby']} {$args['order']}
+                   LIMIT %d OFFSET %d";
+            
+            $values[] = $args['per_page'];
+            $values[] = $offset;
+            
+            $results = $this->db->get_results($this->db->prepare($sql, $values), ARRAY_A);
+            
+            if ($results === null) {
+                return new WP_Error(
+                    'db_error',
+                    __('Ett fel uppstod vid hämtning av resurser.', 'schemaprowp'),
+                    array('status' => 500)
+                );
+            }
+            
+            return array(
+                'items' => $results,
+                'total' => (int) $total_items,
+                'pages' => ceil($total_items / $args['per_page'])
+            );
+            
+        } catch (Exception $e) {
+            return new WP_Error(
+                'resource_error',
+                $e->getMessage(),
+                array('status' => 500)
+            );
+        }
     }
 
     /**
