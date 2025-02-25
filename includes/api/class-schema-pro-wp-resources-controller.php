@@ -6,62 +6,71 @@
  * @since 1.0.0
  */
 
-class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
-    /**
-     * Constructor.
-     */
+class SchemaProWP_Resources_Controller extends WP_REST_Controller {
+    
+    protected $namespace = 'schemaprowp/v1';
+    protected $rest_base = 'resources';
+    protected $resource_model;
+
     public function __construct() {
-        $this->namespace = 'schemaprowp/v1';
-        $this->rest_base = 'resources';
+        $this->resource_model = new SchemaProWP_Resource();
     }
 
     /**
      * Registrera routes.
      */
     public function register_routes() {
-        register_rest_route($this->namespace, '/' . $this->rest_base, array(
+        register_rest_route(
+            $this->namespace,
+            '/' . $this->rest_base,
             array(
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => array($this, 'get_items'),
-                'permission_callback' => array($this, 'get_items_permissions_check'),
-                'args' => $this->get_collection_params(),
-            ),
-            array(
-                'methods' => WP_REST_Server::CREATABLE,
-                'callback' => array($this, 'create_item'),
-                'permission_callback' => array($this, 'create_item_permissions_check'),
-                'args' => $this->get_endpoint_args_for_item_schema(true),
-            ),
-        ));
+                array(
+                    'methods' => WP_REST_Server::READABLE,
+                    'callback' => array($this, 'get_items'),
+                    'permission_callback' => array($this, 'get_items_permissions_check'),
+                    'args' => $this->get_collection_params(),
+                ),
+                array(
+                    'methods' => WP_REST_Server::CREATABLE,
+                    'callback' => array($this, 'create_item'),
+                    'permission_callback' => array($this, 'create_item_permissions_check'),
+                    'args' => $this->get_endpoint_args_for_item_schema(WP_REST_Server::CREATABLE),
+                )
+            )
+        );
 
-        register_rest_route($this->namespace, '/' . $this->rest_base . '/(?P<id>[\d]+)', array(
+        register_rest_route(
+            $this->namespace,
+            '/' . $this->rest_base . '/(?P<id>[\d]+)',
             array(
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => array($this, 'get_item'),
-                'permission_callback' => array($this, 'get_item_permissions_check'),
-                'args' => array(
-                    'id' => array(
-                        'validate_callback' => 'rest_validate_request_arg',
+                array(
+                    'methods' => WP_REST_Server::READABLE,
+                    'callback' => array($this, 'get_item'),
+                    'permission_callback' => array($this, 'get_item_permissions_check'),
+                    'args' => array(
+                        'id' => array(
+                            'validate_callback' => 'rest_validate_request_arg',
+                        ),
                     ),
                 ),
-            ),
-            array(
-                'methods' => WP_REST_Server::EDITABLE,
-                'callback' => array($this, 'update_item'),
-                'permission_callback' => array($this, 'update_item_permissions_check'),
-                'args' => $this->get_endpoint_args_for_item_schema(false),
-            ),
-            array(
-                'methods' => WP_REST_Server::DELETABLE,
-                'callback' => array($this, 'delete_item'),
-                'permission_callback' => array($this, 'delete_item_permissions_check'),
-                'args' => array(
-                    'id' => array(
-                        'validate_callback' => 'rest_validate_request_arg',
+                array(
+                    'methods' => WP_REST_Server::EDITABLE,
+                    'callback' => array($this, 'update_item'),
+                    'permission_callback' => array($this, 'update_item_permissions_check'),
+                    'args' => $this->get_endpoint_args_for_item_schema(false),
+                ),
+                array(
+                    'methods' => WP_REST_Server::DELETABLE,
+                    'callback' => array($this, 'delete_item'),
+                    'permission_callback' => array($this, 'delete_item_permissions_check'),
+                    'args' => array(
+                        'id' => array(
+                            'validate_callback' => 'rest_validate_request_arg',
+                        ),
                     ),
                 ),
-            ),
-        ));
+            )
+        );
     }
 
     /**
@@ -71,8 +80,7 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
      * @return WP_Error|bool
      */
     public function get_items_permissions_check($request) {
-        // Allow public access to view resources
-        return true;
+        return is_user_logged_in();
     }
 
     /**
@@ -82,8 +90,7 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
      * @return WP_Error|bool
      */
     public function get_item_permissions_check($request) {
-        // Allow public access to view individual resources
-        return true;
+        return is_user_logged_in();
     }
 
     /**
@@ -93,25 +100,7 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
      * @return WP_Error|bool
      */
     public function create_item_permissions_check($request) {
-        // Only administrators can create resources
-        if (!current_user_can('manage_options')) {
-            return new WP_Error(
-                'rest_forbidden',
-                __('Du har inte behörighet att skapa resurser.', 'schemaprowp'),
-                array('status' => rest_authorization_required_code())
-            );
-        }
-
-        // Verify nonce for admin users
-        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
-            return new WP_Error(
-                'rest_forbidden_nonce',
-                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
-                array('status' => rest_authorization_required_code())
-            );
-        }
-
-        return true;
+        return current_user_can('edit_posts');
     }
 
     /**
@@ -121,25 +110,7 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
      * @return WP_Error|bool
      */
     public function update_item_permissions_check($request) {
-        // Only administrators can update resources
-        if (!current_user_can('manage_options')) {
-            return new WP_Error(
-                'rest_forbidden',
-                __('Du har inte behörighet att uppdatera resurser.', 'schemaprowp'),
-                array('status' => rest_authorization_required_code())
-            );
-        }
-
-        // Verify nonce for admin users
-        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
-            return new WP_Error(
-                'rest_forbidden_nonce',
-                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
-                array('status' => rest_authorization_required_code())
-            );
-        }
-
-        return true;
+        return current_user_can('edit_posts');
     }
 
     /**
@@ -149,25 +120,7 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
      * @return WP_Error|bool
      */
     public function delete_item_permissions_check($request) {
-        // Only administrators can delete resources
-        if (!current_user_can('manage_options')) {
-            return new WP_Error(
-                'rest_forbidden',
-                __('Du har inte behörighet att ta bort resurser.', 'schemaprowp'),
-                array('status' => rest_authorization_required_code())
-            );
-        }
-
-        // Verify nonce for admin users
-        if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
-            return new WP_Error(
-                'rest_forbidden_nonce',
-                __('Ogiltig säkerhetstoken.', 'schemaprowp'),
-                array('status' => rest_authorization_required_code())
-            );
-        }
-
-        return true;
+        return current_user_can('delete_posts');
     }
 
     /**
@@ -178,70 +131,66 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
      */
     public function get_items($request) {
         try {
-            global $wpdb;
+            // Process request parameters
+            $args = array(
+                'per_page' => $request->get_param('per_page') ? (int) $request->get_param('per_page') : 10,
+                'page' => $request->get_param('page') ? (int) $request->get_param('page') : 1,
+                'orderby' => $request->get_param('orderby') ?: 'id',
+                'order' => $request->get_param('order') ?: 'DESC',
+            );
 
-            // Debug database connection
-            if (!$wpdb->check_connection()) {
-                return new WP_Error(
-                    'db_connection_error',
-                    __('Kunde inte ansluta till databasen.', 'schemaprowp'),
-                    array('status' => 500)
-                );
-            }
+            // Get resources from the model
+            $result = $this->resource_model->get_all($args);
 
-            // Debug table existence
-            $table_name = $wpdb->prefix . 'schemapro_resources';
-            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
-            
-            if (!$table_exists) {
-                // Try to create tables
-                require_once plugin_dir_path(dirname(dirname(__FILE__))) . 'includes/class-schema-pro-wp-activator.php';
-                SchemaProWP_Activator::create_database_tables();
-                
-                // Check again
-                $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
-                
-                if (!$table_exists) {
-                    return new WP_Error(
-                        'table_not_found',
-                        __('Resurstabellen existerar inte. Vänligen återaktivera pluginet.', 'schemaprowp'),
-                        array('status' => 500)
-                    );
-                }
-            }
-
-            // Get and validate query parameters
-            $args = $this->prepare_query_args($request);
-            if (is_wp_error($args)) {
-                return $args;
-            }
-
-            // Get resources from database
-            $resource_model = new SchemaProWP_Resource();
-            $result = $resource_model->get_all($args);
-            
             if (is_wp_error($result)) {
                 return $result;
             }
 
             // Prepare items for response
-            $items = array();
-            foreach ($result['items'] as $item) {
-                $items[] = $this->prepare_response_for_collection($item);
-            }
+            $items = array_map(array($this, 'prepare_response_for_collection'), $result['items']);
 
-            // Create the response
+            // Prepare response
             $response = rest_ensure_response($items);
 
             // Add pagination headers
             $response->header('X-WP-Total', $result['total']);
-            $response->header('X-WP-TotalPages', $result['pages']);
+            $response->header('X-WP-TotalPages', ceil($result['total'] / $result['per_page']));
+
+            return $response;
+
+        } catch (Exception $e) {
+            error_log('SchemaProWP REST API Error: ' . $e->getMessage());
+            return new WP_Error(
+                'rest_error',
+                'An error occurred while processing your request.',
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Hämta resurs.
+     *
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object eller WP_Error.
+     */
+    public function get_item($request) {
+        try {
+            // Get resource from the model
+            $result = $this->resource_model->get($request->get_param('id'));
+
+            if (is_wp_error($result)) {
+                return $result;
+            }
+
+            // Prepare response
+            $response = rest_ensure_response($result);
 
             return $response;
 
         } catch (Exception $e) {
             return new WP_Error(
-                'schemaprowp_error',
+                'rest_error',
                 $e->getMessage(),
                 array('status' => 500)
             );
@@ -249,77 +198,216 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
     }
 
     /**
-     * Prepare query arguments for get_items.
+     * Skapa resurs.
      *
      * @param WP_REST_Request $request Request object.
-     * @return array|WP_Error Prepared arguments or WP_Error.
+     * @return WP_REST_Response|WP_Error Response object eller WP_Error.
      */
-    protected function prepare_query_args($request) {
-        $args = array();
-        $params = $request->get_params();
-
-        // Validate and sanitize pagination parameters
-        if (!empty($params['per_page'])) {
-            $per_page = absint($params['per_page']);
-            if ($per_page < 1 || $per_page > 100) {
-                return new WP_Error(
-                    'rest_invalid_param',
-                    __('Antal per sida måste vara mellan 1 och 100.', 'schemaprowp'),
-                    array('status' => 400)
-                );
+    public function create_item($request) {
+        try {
+            // Sanitera input
+            $params = $this->sanitize_request_params($request->get_params());
+            
+            // Validera input
+            $validation = $this->validate_request_params($params, $request);
+            if (is_wp_error($validation)) {
+                return $validation;
             }
-            $args['per_page'] = $per_page;
-        } else {
-            $args['per_page'] = 10;
-        }
-
-        if (!empty($params['page'])) {
-            $page = absint($params['page']);
-            if ($page < 1) {
-                return new WP_Error(
-                    'rest_invalid_param',
-                    __('Sidnummer måste vara större än 0.', 'schemaprowp'),
-                    array('status' => 400)
-                );
+            
+            // Skapa resurs
+            $resource = $this->resource_model->create($params);
+            
+            if (is_wp_error($resource)) {
+                return $resource;
             }
-            $args['page'] = $page;
-        } else {
-            $args['page'] = 1;
-        }
+            
+            // Prepare response
+            $response = rest_ensure_response($this->prepare_response_for_collection($resource));
 
-        // Validate and sanitize filter parameters
+            return $response;
+
+        } catch (Exception $e) {
+            return new WP_Error(
+                'rest_error',
+                $e->getMessage(),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Uppdatera resurs.
+     *
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object eller WP_Error.
+     */
+    public function update_item($request) {
+        try {
+            // Sanitera input
+            $params = $this->sanitize_request_params($request->get_params());
+            
+            // Validera input
+            $validation = $this->validate_request_params($params, $request);
+            if (is_wp_error($validation)) {
+                return $validation;
+            }
+            
+            // Uppdatera resurs
+            $resource = $this->resource_model->update($request->get_param('id'), $params);
+            
+            if (is_wp_error($resource)) {
+                return $resource;
+            }
+            
+            // Prepare response
+            $response = rest_ensure_response($this->prepare_response_for_collection($resource));
+
+            return $response;
+
+        } catch (Exception $e) {
+            return new WP_Error(
+                'rest_error',
+                $e->getMessage(),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Ta bort resurs.
+     *
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object eller WP_Error.
+     */
+    public function delete_item($request) {
+        try {
+            // Ta bort resurs
+            $result = $this->resource_model->delete($request->get_param('id'));
+            
+            if (is_wp_error($result)) {
+                return $result;
+            }
+            
+            // Prepare response
+            $response = rest_ensure_response(array('message' => __('Resurs borttagen.', 'schemaprowp')));
+
+            return $response;
+
+        } catch (Exception $e) {
+            return new WP_Error(
+                'rest_error',
+                $e->getMessage(),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Sanitera request parametrar.
+     *
+     * @param array $params Request parametrar.
+     * @return array Saniterade parametrar.
+     */
+    protected function sanitize_request_params($params) {
+        $sanitized = array();
+        
+        if (!empty($params['title'])) {
+            $sanitized['title'] = sanitize_text_field($params['title']);
+        }
+        
+        if (!empty($params['description'])) {
+            $sanitized['description'] = wp_kses_post($params['description']);
+        }
+        
         if (!empty($params['type'])) {
-            $valid_types = array('room', 'equipment', 'vehicle');
-            $type = sanitize_text_field($params['type']);
-            if (!in_array($type, $valid_types)) {
-                return new WP_Error(
-                    'rest_invalid_param',
-                    __('Ogiltig resurstyp.', 'schemaprowp'),
-                    array('status' => 400)
-                );
-            }
-            $args['type'] = $type;
+            $sanitized['type'] = sanitize_text_field($params['type']);
         }
-
+        
         if (!empty($params['status'])) {
-            $valid_statuses = array('available', 'booked', 'maintenance');
-            $status = sanitize_text_field($params['status']);
-            if (!in_array($status, $valid_statuses)) {
-                return new WP_Error(
-                    'rest_invalid_param',
-                    __('Ogiltig status.', 'schemaprowp'),
+            $sanitized['status'] = sanitize_text_field($params['status']);
+        }
+        
+        return $sanitized;
+    }
+
+    /**
+     * Validera request parametrar.
+     *
+     * @param array           $params  Request parametrar.
+     * @param WP_REST_Request $request Request object (optional).
+     * @return true|WP_Error True om valid, WP_Error annars.
+     */
+    protected function validate_request_params($params, $request) {
+        $errors = new WP_Error();
+        
+        if (empty($params['title'])) {
+            $errors->add(
+                'missing_title',
+                __('Title is required.', 'schemaprowp'),
+                array('status' => 400)
+            );
+        }
+        
+        if (!empty($params['type'])) {
+            $valid_types = array('room', 'equipment');
+            if (!in_array($params['type'], $valid_types)) {
+                $errors->add(
+                    'invalid_type',
+                    __('Invalid resource type.', 'schemaprowp'),
                     array('status' => 400)
                 );
             }
-            $args['status'] = $status;
         }
-
-        // Apply search parameter if present
-        if (!empty($params['search'])) {
-            $args['search'] = sanitize_text_field($params['search']);
+        
+        if (!empty($params['status'])) {
+            $valid_statuses = array('active', 'inactive', 'maintenance');
+            if (!in_array($params['status'], $valid_statuses)) {
+                $errors->add(
+                    'invalid_status',
+                    __('Invalid resource status.', 'schemaprowp'),
+                    array('status' => 400)
+                );
+            }
         }
+        
+        return $errors->has_errors() ? $errors : true;
+    }
 
-        return $args;
+    /**
+     * Get the query params for collections.
+     *
+     * @return array Collection parameters.
+     */
+    public function get_collection_params() {
+        return array(
+            'page' => array(
+                'description' => __('Current page of the collection.', 'schemaprowp'),
+                'type' => 'integer',
+                'default' => 1,
+                'minimum' => 1,
+                'sanitize_callback' => 'absint',
+            ),
+            'per_page' => array(
+                'description' => __('Maximum number of items to be returned in result set.', 'schemaprowp'),
+                'type' => 'integer',
+                'default' => 10,
+                'minimum' => 1,
+                'maximum' => 100,
+                'sanitize_callback' => 'absint',
+            ),
+            'orderby' => array(
+                'description' => __('Sort collection by parameter.', 'schemaprowp'),
+                'type' => 'string',
+                'default' => 'id',
+                'enum' => array('id', 'title', 'type', 'status', 'created_at'),
+            ),
+            'order' => array(
+                'description' => __('Order sort attribute ascending or descending.', 'schemaprowp'),
+                'type' => 'string',
+                'default' => 'DESC',
+                'enum' => array('ASC', 'DESC'),
+            ),
+        );
     }
 
     /**
@@ -329,7 +417,7 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
      * @param WP_REST_Request $request Request object (optional).
      * @return array Prepared item data.
      */
-    public function prepare_response_for_collection($item, $request = null) {
+    public function prepare_response_for_collection($item) {
         return array(
             'id' => absint($item['id']),
             'title' => sanitize_text_field($item['title']),
@@ -342,149 +430,44 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
     }
 
     /**
-     * Get the query params for collections.
-     *
-     * @return array Collection parameters.
-     */
-    public function get_collection_params() {
-        return array(
-            'page' => array(
-                'description' => __('Aktuell sida av resultatet.', 'schemaprowp'),
-                'type' => 'integer',
-                'default' => 1,
-                'minimum' => 1,
-                'sanitize_callback' => 'absint',
-            ),
-            'per_page' => array(
-                'description' => __('Antal resultat per sida.', 'schemaprowp'),
-                'type' => 'integer',
-                'default' => 10,
-                'minimum' => 1,
-                'maximum' => 100,
-                'sanitize_callback' => 'absint',
-            ),
-            'search' => array(
-                'description' => __('Sökterm att filtrera resultat med.', 'schemaprowp'),
-                'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field',
-            ),
-            'type' => array(
-                'description' => __('Filtrera efter resurstyp.', 'schemaprowp'),
-                'type' => 'string',
-                'enum' => array('room', 'equipment', 'vehicle'),
-                'sanitize_callback' => 'sanitize_text_field',
-            ),
-            'status' => array(
-                'description' => __('Filtrera efter status.', 'schemaprowp'),
-                'type' => 'string',
-                'enum' => array('available', 'booked', 'maintenance'),
-                'sanitize_callback' => 'sanitize_text_field',
-            ),
-        );
-    }
-
-    /**
-     * Skapa resurs.
-     *
-     * @param WP_REST_Request $request Request object.
-     * @return WP_REST_Response|WP_Error Response object eller WP_Error.
-     */
-    public function create_item($request) {
-        $resource_model = new SchemaProWP_Resource();
-        
-        // Sanitera input
-        $params = $this->sanitize_request_params($request->get_params());
-        
-        // Validera input
-        $validation = $this->validate_request_params($params, $request);
-        if (is_wp_error($validation)) {
-            return $validation;
-        }
-        
-        $resource = $resource_model->create($params);
-        
-        if (is_wp_error($resource)) {
-            return $resource;
-        }
-        
-        return rest_ensure_response($this->prepare_response_for_collection($resource));
-    }
-
-    /**
-     * Sanitera request parametrar.
-     *
-     * @param array $params Request parametrar.
-     * @return array Saniterade parametrar.
-     */
-    protected function sanitize_request_params($params) {
-        $sanitized = array();
-        
-        if (isset($params['title'])) {
-            $sanitized['title'] = sanitize_text_field($params['title']);
-        }
-        if (isset($params['description'])) {
-            $sanitized['description'] = wp_kses_post($params['description']);
-        }
-        if (isset($params['status'])) {
-            $sanitized['status'] = sanitize_key($params['status']);
-        }
-        
-        return $sanitized;
-    }
-
-    /**
-     * Validera request parametrar.
-     *
-     * @param array           $params  Request parametrar.
-     * @param WP_REST_Request $request Request object.
-     * @return true|WP_Error True om valid, WP_Error annars.
-     */
-    protected function validate_request_params($params, $request) {
-        if (empty($params['title'])) {
-            return new WP_Error(
-                'rest_missing_title',
-                __('Titel är obligatorisk.', 'schemaprowp'),
-                array('status' => 400)
-            );
-        }
-
-        if (!empty($params['status']) && !in_array($params['status'], array('active', 'inactive'), true)) {
-            return new WP_Error(
-                'rest_invalid_status',
-                __('Ogiltig status.', 'schemaprowp'),
-                array('status' => 400)
-            );
-        }
-
-        return true;
-    }
-
-    /**
      * Hämta endpoint argument för item schema.
      *
      * @param bool $is_create Om detta är för create operation.
      * @return array Endpoint argument.
      */
-    protected function get_endpoint_args_for_item_schema($is_create = false) {
-        return array(
-            'title' => array(
-                'description' => __('Resursens titel.', 'schemaprowp'),
-                'type' => 'string',
-                'required' => $is_create,
-                'sanitize_callback' => 'sanitize_text_field',
-            ),
-            'description' => array(
-                'description' => __('Resursens beskrivning.', 'schemaprowp'),
-                'type' => 'string',
-                'sanitize_callback' => 'wp_kses_post',
-            ),
-            'status' => array(
-                'description' => __('Resursens status.', 'schemaprowp'),
-                'type' => 'string',
-                'enum' => array('active', 'inactive'),
-                'default' => 'active',
-                'sanitize_callback' => 'sanitize_key',
-            ),
-        );
+    public function get_endpoint_args_for_item_schema($method = WP_REST_Server::CREATABLE) {
+        $args = array();
+        
+        if (WP_REST_Server::CREATABLE === $method || WP_REST_Server::EDITABLE === $method) {
+            $args = array(
+                'title' => array(
+                    'description' => __('The title of the resource.', 'schemaprowp'),
+                    'type' => 'string',
+                    'required' => true,
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'description' => array(
+                    'description' => __('The description of the resource.', 'schemaprowp'),
+                    'type' => 'string',
+                    'required' => false,
+                    'sanitize_callback' => 'wp_kses_post',
+                ),
+                'type' => array(
+                    'description' => __('The type of the resource.', 'schemaprowp'),
+                    'type' => 'string',
+                    'required' => true,
+                    'enum' => array('room', 'equipment'),
+                ),
+                'status' => array(
+                    'description' => __('The status of the resource.', 'schemaprowp'),
+                    'type' => 'string',
+                    'required' => false,
+                    'default' => 'active',
+                    'enum' => array('active', 'inactive', 'maintenance'),
+                ),
+            );
+        }
+        
+        return $args;
     }
 }

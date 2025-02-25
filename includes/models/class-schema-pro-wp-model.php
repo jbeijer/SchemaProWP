@@ -62,48 +62,61 @@ abstract class SchemaProWP_Model {
         $defaults = array(
             'orderby' => $this->primary_key,
             'order' => 'DESC',
-            'limit' => 0,
-            'offset' => 0,
+            'per_page' => 10,
+            'page' => 1,
             'where' => array(),
         );
 
         $args = wp_parse_args($args, $defaults);
         $table = $this->get_table_name();
         
-        $where = '';
-        $values = array();
+        // Build WHERE clause
+        $where_conditions = array();
+        $where_values = array();
         
         if (!empty($args['where'])) {
-            $conditions = array();
             foreach ($args['where'] as $field => $value) {
-                $conditions[] = "{$field} = %s";
-                $values[] = $value;
-            }
-            $where = 'WHERE ' . implode(' AND ', $conditions);
-        }
-
-        $limit = '';
-        if ($args['limit'] > 0) {
-            $limit = 'LIMIT %d';
-            if ($args['offset'] > 0) {
-                $limit .= ' OFFSET %d';
-                $values[] = $args['limit'];
-                $values[] = $args['offset'];
-            } else {
-                $values[] = $args['limit'];
+                $where_conditions[] = "{$field} = %s";
+                $where_values[] = $value;
             }
         }
-
-        $sql = "SELECT * FROM {$table} 
-                {$where} 
-                ORDER BY {$args['orderby']} {$args['order']}
-                {$limit}";
-
-        if (!empty($values)) {
-            $sql = $this->db->prepare($sql, $values);
+        
+        // Calculate pagination
+        $offset = ($args['page'] - 1) * $args['per_page'];
+        
+        // Get total count first
+        $count_sql = "SELECT COUNT(*) FROM {$table}";
+        if (!empty($where_conditions)) {
+            $count_sql .= " WHERE " . implode(' AND ', $where_conditions);
+            $count_sql = $this->db->prepare($count_sql, $where_values);
         }
-
-        return $this->db->get_results($sql);
+        $total = (int) $this->db->get_var($count_sql);
+        
+        // Build main query
+        $sql = "SELECT * FROM {$table}";
+        if (!empty($where_conditions)) {
+            $sql .= " WHERE " . implode(' AND ', $where_conditions);
+        }
+        
+        // Add ordering
+        $sql .= $this->db->prepare(" ORDER BY %s %s", 
+            array($args['orderby'], $args['order'])
+        );
+        
+        // Add pagination
+        $sql .= " LIMIT %d OFFSET %d";
+        $values = array_merge($where_values, array($args['per_page'], $offset));
+        
+        // Prepare and execute query
+        $sql = $this->db->prepare($sql, $values);
+        $items = $this->db->get_results($sql);
+        
+        return array(
+            'items' => $items,
+            'total' => $total,
+            'page' => $args['page'],
+            'per_page' => $args['per_page']
+        );
     }
 
     /**

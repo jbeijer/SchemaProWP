@@ -1,12 +1,11 @@
 <script>
 import { onMount } from 'svelte';
-import { resources, bookings, loading, errors, fetchResources, fetchBookings } from '../stores/resources.store.js';
+import { resources, loading, errors, fetchResources } from '../stores/resources.store.js';
 
 export let wpData;
 
 onMount(() => {
     fetchResources(wpData.apiUrl, wpData.nonce);
-    fetchBookings(wpData.apiUrl, wpData.nonce);
 });
 </script>
 
@@ -30,32 +29,10 @@ onMount(() => {
                     <div class="resource-card">
                         <h3>{resource.title}</h3>
                         <p>{resource.description}</p>
-                    </div>
-                {/each}
-            </div>
-        {/if}
-    </section>
-
-    <!-- Bookings Section -->
-    <section class="bookings-section">
-        <h2>Bookings</h2>
-        
-        {#if $loading.bookings}
-            <div class="loading">Loading bookings...</div>
-        {:else if $errors.bookings}
-            <div class="error">
-                <p>Error loading bookings: {$errors.bookings}</p>
-                <button on:click={() => fetchBookings(wpData.apiUrl, wpData.nonce)}>
-                    Retry
-                </button>
-            </div>
-        {:else}
-            <div class="bookings-list">
-                {#each $bookings as booking}
-                    <div class="booking-item">
-                        <h3>{booking.title}</h3>
-                        <p>Date: {booking.date}</p>
-                        <p>Status: {booking.status}</p>
+                        <div class="resource-meta">
+                            <span class="type">{resource.type}</span>
+                            <span class="status">{resource.status}</span>
+                        </div>
                     </div>
                 {/each}
             </div>
@@ -64,63 +41,99 @@ onMount(() => {
 </div>
 
 <style>
-    .schema-pro-wp-public {
-        padding: 1rem;
-    }
+.schema-pro-wp-public {
+    padding: 2rem;
+}
 
-    .loading {
-        text-align: center;
-        padding: 2rem;
-        color: #666;
-    }
+.resources-section {
+    max-width: 1200px;
+    margin: 0 auto;
+}
 
-    .error {
-        background: #fff5f5;
-        border: 1px solid #feb2b2;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 1rem 0;
-    }
+h2 {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    color: #333;
+}
 
-    .error button {
-        background: #e53e3e;
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 0.25rem;
-        border: none;
-        margin-top: 0.5rem;
-        cursor: pointer;
-    }
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
 
-    .error button:hover {
-        background: #c53030;
-    }
+.error {
+    background-color: #fee;
+    border: 1px solid #fcc;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
 
-    .resources-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 1rem;
-        margin-top: 1rem;
-    }
+.error button {
+    background-color: #f44;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
 
-    .resource-card {
-        background: white;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
+.error button:hover {
+    background-color: #e33;
+}
 
-    .bookings-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        margin-top: 1rem;
-    }
+.resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
 
-    .booking-item {
-        background: white;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
+.resource-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    transition: transform 0.2s ease;
+}
+
+.resource-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.resource-card h3 {
+    margin: 0 0 1rem;
+    color: #333;
+    font-size: 1.25rem;
+}
+
+.resource-card p {
+    color: #666;
+    margin: 0 0 1rem;
+    line-height: 1.5;
+}
+
+.resource-meta {
+    display: flex;
+    gap: 1rem;
+    margin-top: auto;
+}
+
+.resource-meta span {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.875rem;
+}
+
+.type {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.status {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
 </style>
