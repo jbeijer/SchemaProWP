@@ -9,7 +9,8 @@ let resource = {
     description: '',
     type: 'equipment',
     status: 'active',
-    organization_id: ''
+    organization_id: '',
+    post_id: ''
 };
 
 let isSubmitting = false;
@@ -27,6 +28,9 @@ async function handleSubmit() {
         isSubmitting = false;
         return;
     }
+
+    // Set post_id from organization_id before submitting
+    resource.post_id = resource.organization_id;
 
     try {
         const response = await fetch(`${wpData.apiUrl}/resources`, {
@@ -50,7 +54,8 @@ async function handleSubmit() {
             description: '',
             type: 'equipment',
             status: 'active',
-            organization_id: ''
+            organization_id: '',
+            post_id: ''
         };
     } catch (error) {
         console.error('Error creating resource:', error);

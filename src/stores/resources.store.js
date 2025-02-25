@@ -10,12 +10,17 @@ export const errors = writable({
 });
 
 // Fetch resources from the API
-export const fetchResources = async (apiUrl, nonce) => {
+export const fetchResources = async (apiUrl, nonce, post_id) => {
+    if (!post_id) {
+        errors.update(e => ({ ...e, resources: 'Missing required parameter: post_id' }));
+        return;
+    }
+
     loading.update(l => ({ ...l, resources: true }));
     errors.update(e => ({ ...e, resources: null }));
     
     try {
-        const response = await fetch(`${apiUrl}/resources`, {
+        const response = await fetch(`${apiUrl}/resources?post_id=${post_id}`, {
             headers: {
                 'X-WP-Nonce': nonce,
                 'Content-Type': 'application/json'

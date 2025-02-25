@@ -7,7 +7,7 @@ import CreateOrganization from './components/CreateOrganization.svelte';
 export let wpData;
 
 onMount(() => {
-    fetchResources(wpData.apiUrl, wpData.nonce);
+    fetchResources(wpData.apiUrl, wpData.nonce, wpData.post_id);
 });
 </script>
 
@@ -21,7 +21,7 @@ onMount(() => {
         {:else if $errors.resources}
             <div class="error">
                 <p>Error loading resources: {$errors.resources}</p>
-                <button on:click={() => fetchResources(wpData.apiUrl, wpData.nonce)}>
+                <button on:click={() => fetchResources(wpData.apiUrl, wpData.nonce, wpData.post_id)}>
                     Retry
                 </button>
             </div>

@@ -245,7 +245,7 @@ async function handleSubmit() {
         font-weight: 500;
     }
 
-    input, textarea, select {
+    input, textarea {
         width: 100%;
         padding: 0.75rem;
         border: 1px solid #ddd;
@@ -254,7 +254,7 @@ async function handleSubmit() {
         transition: border-color 0.2s;
     }
 
-    input:focus, textarea:focus, select:focus {
+    input:focus, textarea:focus {
         outline: none;
         border-color: #007bff;
         box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
