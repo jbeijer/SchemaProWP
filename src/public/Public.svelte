@@ -6,7 +6,7 @@ let bookings = [];
 
 async function fetchResources() {
   try {
-    const response = await fetch(`${wpData.apiUrl}/resources`, {
+    const response = await fetch(`${wpData.apiUrl}resources`, {
       headers: {
         'X-WP-Nonce': wpData.nonce
       }
@@ -21,7 +21,7 @@ async function fetchResources() {
 
 async function fetchBookings() {
   try {
-    const response = await fetch(`${wpData.apiUrl}/bookings`, {
+    const response = await fetch(`${wpData.apiUrl}bookings`, {
       headers: {
         'X-WP-Nonce': wpData.nonce
       }

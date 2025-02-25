@@ -209,7 +209,7 @@ class SchemaProWP_Resources_Controller extends SchemaProWP_REST_Controller {
                 $args['per_page'] = absint($request['per_page']);
             }
 
-            $resources = $resource_model->get_resources($args);
+            $resources = $resource_model->get_all($args);
             
             if (is_wp_error($resources)) {
                 return new WP_Error(
